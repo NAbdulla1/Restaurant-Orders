@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Restaurant_Orders.Data;
+using Restaurant_Orders.Extensions;
 using Restaurant_Orders.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +15,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.SeedAdmin();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Restaurant_Orders.Data.Entities;
+﻿using Restaurant_Orders.Data.Entities;
 
 namespace Restaurant_Orders.Services
 {

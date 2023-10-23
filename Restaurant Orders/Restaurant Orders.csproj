@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Restaurant_Orders</RootNamespace>
+    <UserSecretsId>bbfd5f38-ca23-4d09-b881-016e90c39e2a</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
