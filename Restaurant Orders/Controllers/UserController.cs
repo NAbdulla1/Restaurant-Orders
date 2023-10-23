@@ -67,6 +67,13 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<UserDTO>> RegisterUser([Bind("FirstName,LastName,Email,Password")] User customer)
         {
+            var existingUser = _dbContext.Users.FirstOrDefault(user => user.Email == customer.Email);
+            if(existingUser != null)
+            {
+                ModelState.AddModelError(nameof(customer.Email), $"Another user exists with the given email: '{customer.Email}'.");
+                return ValidationProblem();
+            }
+
             customer = _userService.PrepareCustomer(customer);
 
             _dbContext.Users.Add(customer);
