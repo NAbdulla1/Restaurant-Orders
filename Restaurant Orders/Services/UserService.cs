@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Restaurant_Orders.Data.Entities;
+﻿using Restaurant_Orders.Data.Entities;
 using Restaurant_Orders.Exceptions;
+using Restaurant_Orders.Models.DTOs;
+using System.Security.Claims;
+using System.Text.Json;
 
 namespace Restaurant_Orders.Services
 {
@@ -8,6 +10,8 @@ namespace Restaurant_Orders.Services
     {
         string SignInUser(User user, string password);
         User PrepareCustomer(User customer);
+        void PrepareUserUpdate(User user, UserUpdateDTO userUpdateDTO);
+        UserDTO GetCurrentUser(HttpContext httpContext);
     }
 
     public class UserService : IUserService
@@ -29,14 +33,37 @@ namespace Restaurant_Orders.Services
             return customer;
         }
 
+        public void PrepareUserUpdate(User user, UserUpdateDTO userUpdateDTO)
+        {
+            user.FirstName = userUpdateDTO.FirstName;
+            user.LastName = userUpdateDTO.LastName;
+            user.Password = _passwordService.HashPassword(userUpdateDTO.Password);
+        }
+
         public string SignInUser(User user, string password)
         {
-            if(!_passwordService.VerifyPassword(user.Password, password))
+            if (!_passwordService.VerifyPassword(user.Password, password))
             {
                 throw new UnauthenticatedException("User authentication failed.");
             }
 
             return _tokenService.CreateToken(user);
+        }
+
+        public UserDTO GetCurrentUser(HttpContext httpContext)
+        {
+            var claims = httpContext.User?.Claims;
+
+            var userData = claims?.Where(claim => claim.Type == ClaimTypes.UserData).FirstOrDefault()?.Value;
+
+            if (claims == null || userData == null)
+            {
+                throw new UnauthenticatedException("User authentication failed.");
+            }
+
+            var userDto = JsonSerializer.Deserialize<UserDTO>(userData)!;
+
+            return userDto;
         }
     }
 }

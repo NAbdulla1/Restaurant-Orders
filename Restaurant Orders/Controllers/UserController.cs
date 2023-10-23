@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Restaurant_Orders.Authorizations;
 using Restaurant_Orders.Data;
 using Restaurant_Orders.Data.Entities;
 using Restaurant_Orders.Exceptions;
+using Restaurant_Orders.Extensions;
 using Restaurant_Orders.Models.DTOs;
 using Restaurant_Orders.Services;
 
@@ -24,9 +26,40 @@ namespace Restaurant_Orders.Controllers
 
         [HttpGet]
         [Authorize(Roles = "RestaurantOwner")]
-        public ActionResult<IEnumerable<UserDTO>> GetUsers()
+        public ActionResult<IAsyncEnumerable<UserDTO>> GetUsers()
         {
-            return Ok(_dbContext.Users.Select(user => ToUserDTO(user)).AsEnumerable());
+            return Ok(_dbContext.Users.Select(user => user.ToUserDTO()).AsAsyncEnumerable());
+        }
+
+        [HttpGet("{id:int}")]
+        [Authorize(Policy = OwnProfileModifyRequirement.OwnPMR)]
+        public ActionResult<UserDTO> GetUser(int id) {
+            var user = _dbContext.Users.FirstOrDefault(x => x.Id == id);
+            if(user == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(user.ToUserDTO());
+        }
+
+        [HttpPut("{id:int}")]
+        [Authorize(Policy = OwnProfileModifyRequirement.OwnPMR)]
+        [Consumes("application/json")]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<ActionResult<UserDTO>> UpdateUser(int id, UserUpdateDTO userUpdate)
+        {
+            var user = _dbContext.Users.FirstOrDefault(x => x.Id == id);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            _userService.PrepareUserUpdate(user, userUpdate);
+
+            await _dbContext.SaveChangesAsync();
+
+            return Ok(user.ToUserDTO());
         }
 
         [HttpPost("register")]
@@ -39,7 +72,7 @@ namespace Restaurant_Orders.Controllers
             _dbContext.Users.Add(customer);
             await _dbContext.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(RegisterUser), ToUserDTO(customer));
+            return CreatedAtAction(nameof(RegisterUser), customer.ToUserDTO());
         }
 
         [HttpPost("login")]
@@ -64,17 +97,6 @@ namespace Restaurant_Orders.Controllers
             {
                 return Unauthorized();
             }
-        }
-
-        private static UserDTO ToUserDTO(User item)
-        {
-            return new UserDTO()
-            {
-                Id = item.Id,
-                FirstName = item.FirstName,
-                LastName = item.LastName,
-                Email = item.Email,
-            };
         }
     }
 }

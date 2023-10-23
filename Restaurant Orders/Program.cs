@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Restaurant_Orders.Authorizations;
 using Restaurant_Orders.Data;
 using Restaurant_Orders.Extensions;
 using Restaurant_Orders.Infrastructure;
@@ -12,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddDbContext<RestaurantContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("Database")));
+builder.Services.AddSingleton<IActionContextAccessor, ActionContextAccessor>();
 builder.Services.RegisterServices();
 
 builder.Services.AddAuthentication(options =>
@@ -33,6 +36,14 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(OwnProfileModifyRequirement.OwnPMR, policy =>
+    {
+        policy.Requirements.Add(new OwnProfileModifyRequirement());
+    });
 });
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

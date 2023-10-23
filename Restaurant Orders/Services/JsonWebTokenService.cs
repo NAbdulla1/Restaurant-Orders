@@ -1,9 +1,11 @@
 ﻿using Microsoft.IdentityModel.Tokens;
 using Restaurant_Orders.Data.Entities;
+using Restaurant_Orders.Extensions;
 using Restaurant_Orders.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
 
 namespace Restaurant_Orders.Services
 {
@@ -16,7 +18,8 @@ namespace Restaurant_Orders.Services
     {
         private readonly JWTConfigData _jwtInfo;
 
-        public        JsonWebTokenService(IConfiguration configuration) {
+        public JsonWebTokenService(IConfiguration configuration)
+        {
             _jwtInfo = configuration.GetRequiredSection(JWTConfigData.ConfigSectionName).Get<JWTConfigData>();
         }
 
@@ -35,6 +38,7 @@ namespace Restaurant_Orders.Services
         {
             var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtInfo.Secret));
             var signingCred = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
+
             return signingCred;
         }
 
@@ -59,9 +63,8 @@ namespace Restaurant_Orders.Services
         private static List<Claim> GetUserClaims(User user)
         {
             return new List<Claim> {
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.UserData, JsonSerializer.Serialize(user.ToUserDTO())),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
                 new Claim(ClaimTypes.Role, user.UserType.ToString()),
             };
         }
