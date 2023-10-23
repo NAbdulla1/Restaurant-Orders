@@ -31,9 +31,9 @@ namespace Restaurant_Orders.Controllers
             return Ok(_dbContext.Users.Select(user => user.ToUserDTO()).AsAsyncEnumerable());
         }
 
-        [HttpGet("{id:int}")]
+        [HttpGet("{id:long}")]
         [Authorize(Policy = OwnProfileModifyRequirement.OwnPMR)]
-        public ActionResult<UserDTO> GetUser(int id) {
+        public ActionResult<UserDTO> GetUser(long id) {
             var user = _dbContext.Users.FirstOrDefault(x => x.Id == id);
             if(user == null)
             {
@@ -72,7 +72,7 @@ namespace Restaurant_Orders.Controllers
             _dbContext.Users.Add(customer);
             await _dbContext.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(RegisterUser), customer.ToUserDTO());
+            return CreatedAtAction(nameof(GetUser), new { id = customer.Id }, customer.ToUserDTO());
         }
 
         [HttpPost("login")]
