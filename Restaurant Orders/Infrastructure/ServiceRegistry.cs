@@ -9,6 +9,7 @@ namespace Restaurant_Orders.Infrastructure
 
             return services
                 .AddScoped<IPasswordService, PasswordService>()
+                .AddScoped<ITokenService, JsonWebTokenService>()
                 .AddScoped<IUserService, UserService>();
         }
     }

@@ -1,21 +1,25 @@
-﻿using Restaurant_Orders.Data.Entities;
+﻿using Microsoft.AspNetCore.Mvc;
+using Restaurant_Orders.Data.Entities;
+using Restaurant_Orders.Exceptions;
 
 namespace Restaurant_Orders.Services
 {
     public interface IUserService
     {
-        bool LoginUser(User user, string password);
+        string SignInUser(User user, string password);
         User PrepareCustomer(User customer);
     }
 
     public class UserService : IUserService
     {
-        public UserService(IPasswordService passwordService)
+        public UserService(IPasswordService passwordService, ITokenService tokenService)
         {
-            this._passwordService = passwordService;
+            _passwordService = passwordService;
+            _tokenService = tokenService;
         }
 
         private readonly IPasswordService _passwordService;
+        private readonly ITokenService _tokenService;
 
         public User PrepareCustomer(User customer)
         {
@@ -25,9 +29,14 @@ namespace Restaurant_Orders.Services
             return customer;
         }
 
-        public bool LoginUser(User? user, string password)
+        public string SignInUser(User user, string password)
         {
-            return _passwordService.VerifyPassword(user.Password, password);//TODO create and return actual access token
+            if(!_passwordService.VerifyPassword(user.Password, password))
+            {
+                throw new UnauthenticatedException("User authentication failed.");
+            }
+
+            return _tokenService.CreateToken(user);
         }
     }
 }
