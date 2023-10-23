@@ -52,14 +52,12 @@ namespace Restaurant_Orders.Services
 
         public UserDTO GetCurrentUser(HttpContext httpContext)
         {
-            var claims = httpContext.User?.Claims;
-
-            var userData = claims?.Where(claim => claim.Type == ClaimTypes.UserData).FirstOrDefault()?.Value;
-
-            if (claims == null || userData == null)
+            if(!httpContext.User.HasClaim(c => c.Type == ClaimTypes.UserData))
             {
                 throw new UnauthenticatedException("User authentication failed.");
             }
+
+            var userData = httpContext.User.FindFirstValue(ClaimTypes.UserData);
 
             var userDto = JsonSerializer.Deserialize<UserDTO>(userData)!;
 
