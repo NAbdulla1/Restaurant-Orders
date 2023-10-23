@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Restaurant_Orders.Data;
 using Restaurant_Orders.Data.Entities;
@@ -19,6 +20,13 @@ namespace Restaurant_Orders.Controllers
         {
             _dbContext = dbContext;
             _userService = userService;
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "RestaurantOwner")]
+        public ActionResult<IEnumerable<UserDTO>> GetUsers()
+        {
+            return Ok(_dbContext.Users.Select(user => ToUserDTO(user)).AsEnumerable());
         }
 
         [HttpPost("register")]
