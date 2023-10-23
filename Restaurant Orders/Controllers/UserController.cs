@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Restaurant_Orders.Data;
 using Restaurant_Orders.Data.Entities;
-using Restaurant_Orders.DTOs;
+using Restaurant_Orders.Models.DTOs;
 using Restaurant_Orders.Services;
 
 namespace Restaurant_Orders.Controllers

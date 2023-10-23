@@ -1,4 +1,4 @@
-﻿namespace Restaurant_Orders.DTOs
+﻿namespace Restaurant_Orders.Models.DTOs
 {
     public class UserDTO
     {
