@@ -43,11 +43,11 @@ namespace Restaurant_Orders.Controllers
             return Ok(user.ToUserDTO());
         }
 
-        [HttpPut("{id:int}")]
+        [HttpPut("{id:long}")]
         [Authorize(Policy = OwnProfileModifyRequirement.OwnPMR)]
         [Consumes("application/json")]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<UserDTO>> UpdateUser(int id, UserUpdateDTO userUpdate)
+        public async Task<ActionResult<UserDTO>> UpdateUser(long id, UserUpdateDTO userUpdate)
         {
             var user = _dbContext.Users.FirstOrDefault(x => x.Id == id);
             if (user == null)
