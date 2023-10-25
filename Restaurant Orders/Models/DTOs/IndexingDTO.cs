@@ -1,6 +1,4 @@
-﻿using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using System.Runtime.Serialization;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace Restaurant_Orders.Models.DTOs
 {
@@ -11,6 +9,12 @@ namespace Restaurant_Orders.Models.DTOs
 
         [Range(1, int.MaxValue)]
         public int? PageSize { get; set; }
-        public string? SearchTerm { get; set; }
+
+        public string? SearchBy { get; set; }
+
+        public string? SortBy { get; set; }
+
+        [RegularExpression("asc|desc", ErrorMessage = "Allowed values are 'asc' or 'desc'.")]
+        public string? SortOrder { get; set; } = "asc";
     }
 }

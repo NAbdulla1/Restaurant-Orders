@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Restaurant_Orders.Authorizations;
+using Restaurant_Orders.Data.Entities;
 using Restaurant_Orders.Services;
 
 namespace Restaurant_Orders.Infrastructure
@@ -12,7 +13,9 @@ namespace Restaurant_Orders.Infrastructure
                 .AddSingleton<IAuthorizationHandler, OwnProfileModifyHandler>()
                 .AddScoped<IPasswordService, PasswordService>()
                 .AddScoped<ITokenService, JsonWebTokenService>()
-                .AddScoped<IUserService, UserService>();
+                .AddScoped<IUserService, UserService>()
+                .AddScoped<IMenuItemService, MenuItemService>()
+                .AddScoped<IPaginationService<MenuItem>, PaginationService<MenuItem>>();
         }
     }
 }

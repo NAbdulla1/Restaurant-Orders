@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Restaurant_Orders.Data;
 using Restaurant_Orders.Data.Entities;
+using Restaurant_Orders.Exceptions;
 using Restaurant_Orders.Models.DTOs;
+using Restaurant_Orders.Services;
 
 namespace Restaurant_Orders.Controllers
 {
@@ -12,43 +14,31 @@ namespace Restaurant_Orders.Controllers
     public class MenuItemsController : ControllerBase
     {
         private readonly RestaurantContext _context;
-        private readonly int _defaultPageSize;
+        private readonly IMenuItemService _menuItemService;
+        private readonly IPaginationService<MenuItem> _paginationService;
 
-        public MenuItemsController(RestaurantContext context, IConfiguration configuration)
+        public MenuItemsController(RestaurantContext context, IMenuItemService menuItemService, IPaginationService<MenuItem> paginationService)
         {
             _context = context;
-            _defaultPageSize = configuration.GetValue<int>("DefaultPageSize");
+            _menuItemService = menuItemService;
+            _paginationService = paginationService;
         }
 
         [HttpGet]
         [Authorize(Roles = "RestaurantOwner,Customer")]
         public async Task<ActionResult<PagedData<MenuItem>>> GetMenuItems([FromQuery] IndexingDTO indexData)
         {
-            var result = _context.MenuItems.Where(item => true);
-
-            if (indexData.SearchTerm != null)
+            if (indexData.SortBy != null && !typeof(MenuItem).FieldExists(indexData.SortBy))
             {
-                result = result.Where(
-                    item =>
-                        item.Name.ToLower().Contains(indexData.SearchTerm.ToLower()) ||
-                        (
-                            item.Description != null && item.Description.ToLower().Contains(indexData.SearchTerm.ToLower())
-                        )
-                    );
+                ModelState.AddModelError(nameof(indexData.SortBy), "Can't find the provided sort property.");
+                return ValidationProblem();
             }
 
-            int take = indexData.PageSize ?? _defaultPageSize;
-            int skip = (indexData.Page - 1) * take;
+            var query = _menuItemService.PrepareIndexQuery(_context.MenuItems.Where(item => true), indexData);
 
-            return Ok(new PagedData<MenuItem>
-            {
-                Page = indexData.Page,
-                PageSize = take,
-                Total = await _context.MenuItems.LongCountAsync(),
-                PageData = result.Skip(skip)
-                    .Take(take)
-                    .AsAsyncEnumerable()
-            });
+            var page = await _paginationService.Paginate(query, indexData);
+
+            return Ok(page);
         }
 
         [HttpGet("{id:long}")]
