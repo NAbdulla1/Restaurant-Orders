@@ -12,22 +12,30 @@ namespace Restaurant_Orders.Controllers
     public class MenuItemsController : ControllerBase
     {
         private readonly RestaurantContext _context;
+        private readonly int _defaultPageSize;
 
-        public MenuItemsController(RestaurantContext context)
+        public MenuItemsController(RestaurantContext context, IConfiguration configuration)
         {
             _context = context;
+            _defaultPageSize = configuration.GetValue<int>("DefaultPageSize");
         }
 
         [HttpGet]
         [Authorize(Roles = "RestaurantOwner,Customer")]
-        public async Task<ActionResult<IEnumerable<MenuItem>>> GetMenuItems()
+        public async Task<ActionResult<PagedData<MenuItem>>> GetMenuItems([FromQuery] IndexingDTO indexData)
         {
-            if (_context.MenuItems == null)
-            {
-                return NotFound();
-            }
+            int take = indexData.PageSize ?? _defaultPageSize;
+            int skip = (indexData.Page - 1) * take;
 
-            return await _context.MenuItems.ToListAsync();
+            return Ok(new PagedData<MenuItem>
+            {
+                Page = indexData.Page,
+                PageSize = take,
+                Total = await _context.MenuItems.LongCountAsync(),
+                PageData = _context.MenuItems.Skip(skip)
+                .Take(take)
+                .AsAsyncEnumerable()
+            });
         }
 
         [HttpGet("{id:long}")]
