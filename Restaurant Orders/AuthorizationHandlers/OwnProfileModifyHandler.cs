@@ -16,7 +16,6 @@ namespace Restaurant_Orders.Authorizations
         {
             if (!context.User.HasClaim(c => c.Type == ClaimTypes.UserData))
             {
-                context.Fail();
                 return Task.CompletedTask;
             }
 
@@ -29,7 +28,6 @@ namespace Restaurant_Orders.Authorizations
             var idPathParamValue = httpContext.Request.RouteValues["id"] as string;
             if (idPathParamValue == null)
             {
-                context.Fail();
                 return Task.CompletedTask;
             }
 
@@ -41,6 +39,7 @@ namespace Restaurant_Orders.Authorizations
             {
                 context.Fail();
             }
+
             return Task.CompletedTask;
         }
     }
