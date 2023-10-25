@@ -143,6 +143,12 @@ namespace Restaurant_Orders.Data
                 .HasPrecision(6, 2)
                 .HasColumnName("menu_item_price")
                 .IsRequired();
+
+            modelBuilder.Entity<OrderItem>()
+                .Property(x => x.Quantity)
+                .HasColumnName("quantity")
+                .HasDefaultValue(1)
+                .IsRequired();
         }
     }
 }
