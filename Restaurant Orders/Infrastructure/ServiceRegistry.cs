@@ -15,7 +15,8 @@ namespace Restaurant_Orders.Infrastructure
                 .AddScoped<ITokenService, JsonWebTokenService>()
                 .AddScoped<IUserService, UserService>()
                 .AddScoped<IMenuItemService, MenuItemService>()
-                .AddScoped<IPaginationService<MenuItem>, PaginationService<MenuItem>>();
+                .AddScoped<IPaginationService<MenuItem>, PaginationService<MenuItem>>()
+                .AddScoped<IOrderService, OrderService>();
         }
     }
 }
