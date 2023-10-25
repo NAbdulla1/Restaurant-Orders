@@ -24,6 +24,19 @@ namespace Restaurant_Orders.Controllers
         [Authorize(Roles = "RestaurantOwner,Customer")]
         public async Task<ActionResult<PagedData<MenuItem>>> GetMenuItems([FromQuery] IndexingDTO indexData)
         {
+            var result = _context.MenuItems.Where(item => true);
+
+            if (indexData.SearchTerm != null)
+            {
+                result = result.Where(
+                    item =>
+                        item.Name.ToLower().Contains(indexData.SearchTerm.ToLower()) ||
+                        (
+                            item.Description != null && item.Description.ToLower().Contains(indexData.SearchTerm.ToLower())
+                        )
+                    );
+            }
+
             int take = indexData.PageSize ?? _defaultPageSize;
             int skip = (indexData.Page - 1) * take;
 
@@ -32,9 +45,9 @@ namespace Restaurant_Orders.Controllers
                 Page = indexData.Page,
                 PageSize = take,
                 Total = await _context.MenuItems.LongCountAsync(),
-                PageData = _context.MenuItems.Skip(skip)
-                .Take(take)
-                .AsAsyncEnumerable()
+                PageData = result.Skip(skip)
+                    .Take(take)
+                    .AsAsyncEnumerable()
             });
         }
 

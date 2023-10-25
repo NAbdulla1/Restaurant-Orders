@@ -11,5 +11,6 @@ namespace Restaurant_Orders.Models.DTOs
 
         [Range(1, int.MaxValue)]
         public int? PageSize { get; set; }
+        public string? SearchTerm { get; set; }
     }
 }
