@@ -37,5 +37,7 @@ namespace Restaurant_Orders.Data.Entities
         [Required]
         [Column("user_type")]
         public UserType UserType { get; set; }
+
+        public ICollection<Order> Orders { get; set; } = new List<Order>();
     }
 }
