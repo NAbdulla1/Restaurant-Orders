@@ -1,10 +1,11 @@
 ﻿using System.Reflection;
 
-namespace Restaurant_Orders.Exceptions
+namespace Restaurant_Orders.Extensions
 {
     public static class TypeExtensions
     {
-        public static PropertyInfo? GetPropertyInfo(this Type type, string? name) {
+        public static PropertyInfo? GetPropertyInfo(this Type type, string? name)
+        {
             if (name == null) return null;
             return type
                 .GetProperties()
