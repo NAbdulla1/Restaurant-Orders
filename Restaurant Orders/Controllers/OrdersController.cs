@@ -56,9 +56,39 @@ namespace Restaurant_Orders.Controllers
             return order;
         }
 
+        [HttpPatch("{id}/status")]
+        [Authorize(Roles = "RestaurantOwner")]
+        public async Task<ActionResult<Order>> UpdateOrderStatus(long id, OrderStatusDTO orderStatusDTO)
+        {
+            var order = await _context.Orders.FirstOrDefaultAsync(o => o.Id == id);
+            if (order == null)
+            {
+                return Problem(
+                    title: "Unable to save changes. The order was deleted by someone else.",
+                    statusCode: 404
+                );
+            }
+
+            order.Status = orderStatusDTO.Status;
+            order.Version = Guid.NewGuid();
+
+            _context.Entry(order).State = EntityState.Modified;
+            _context.Entry(order).Property("Version").OriginalValue = orderStatusDTO.Version;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return Ok(order);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return ConcurrentErrorResponse(id);
+            }
+        }
+
         [HttpPatch("{id}")]
         [Authorize(Roles = "Customer")]
-        public async Task<IActionResult> UpdateOrder(long id, OrderUpdateDTO orderData)
+        public async Task<ActionResult<Order>> UpdateOrder(long id, OrderUpdateDTO orderData)
         {
             bool validationProblem = CustomValidation(orderData);
 
@@ -110,19 +140,7 @@ namespace Restaurant_Orders.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!OrderExists(id))
-                {
-                    return Problem(
-                        title: "Unable to save changes. The order was deleted by someone else.",
-                        statusCode: 404
-                    );
-                }
-                else
-                {
-                    return Problem(
-                        title: "The record you attempted to edit was modified by another user after you got the original value."
-                    );
-                }
+                return ConcurrentErrorResponse(id);
             }
 
             return Ok(order);
@@ -202,6 +220,23 @@ namespace Restaurant_Orders.Controllers
         private bool OrderExists(long id)
         {
             return (_context.Orders?.Any(e => e.Id == id)).GetValueOrDefault();
+        }
+
+        private ActionResult<Order> ConcurrentErrorResponse(long id)
+        {
+            if (!OrderExists(id))
+            {
+                return Problem(
+                    title: "Unable to save changes. The order was deleted by someone else.",
+                    statusCode: 404
+                );
+            }
+            else
+            {
+                return Problem(
+                    title: "The record you attempted to edit was modified by another user after you got the original value."
+                );
+            }
         }
     }
 }
