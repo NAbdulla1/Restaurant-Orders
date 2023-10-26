@@ -19,7 +19,6 @@ builder.Services.AddControllers()
     });
 
 builder.Services.AddDbContext<RestaurantContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("Database")));
-builder.Services.AddSingleton<IActionContextAccessor, ActionContextAccessor>();
 builder.Services.RegisterServices();
 
 builder.Services.AddAuthentication(options =>
