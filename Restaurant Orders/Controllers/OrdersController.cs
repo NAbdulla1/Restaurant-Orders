@@ -292,7 +292,7 @@ namespace Restaurant_Orders.Controllers
 
             if (order.CustomerId != _userService.GetCurrentUser(HttpContext).Id)
             {
-                return Problem(title: "Not allowed to cancel other users order.", statusCode: 403);
+                return Problem(title: "Not allowed to pay other users order.", statusCode: 403);
             }
 
             if (order.Status != OrderStatus.PROCESSING)
