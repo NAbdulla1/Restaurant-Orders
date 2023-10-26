@@ -69,6 +69,11 @@ namespace Restaurant_Orders.Controllers
                 );
             }
 
+            return await UpdateStatus(orderStatusDTO, order);
+        }
+
+        private async Task<ActionResult<Order>> UpdateStatus(OrderStatusDTO orderStatusDTO, Order order)
+        {
             order.Status = orderStatusDTO.Status;
             order.Version = Guid.NewGuid();
 
@@ -82,7 +87,7 @@ namespace Restaurant_Orders.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                return ConcurrentErrorResponse(id);
+                return ConcurrentErrorResponse(order.Id);
             }
         }
 
@@ -215,6 +220,33 @@ namespace Restaurant_Orders.Controllers
                     title: "The record you attempted to delete was modified by another user after you got the original value. Please fetch the order again to get new version."
                 );
             }
+        }
+
+        [HttpPost("{id}/cancel")]
+        [Authorize(Roles = "Customer")]
+        public async Task<ActionResult<Order>> CancelOrder(long id, VersionDTO versionDTO)
+        {
+            var order = await _context.Orders.Include("OrderItems").FirstOrDefaultAsync(o => o.Id == id);
+            if (order == null)
+            {
+                return Problem(
+                    title: "Unable to save changes. The order was deleted by someone else.",
+                    statusCode: 404
+                );
+            }
+
+            if (order.CustomerId != _userService.GetCurrentUser(HttpContext).Id)
+            {
+                return Problem(title: "Not allowed to cancel other users order.", statusCode: 403);
+            }
+
+            if (order.Status != OrderStatus.CREATED && order.Status != OrderStatus.PROCESSING)
+            {
+                ModelState.AddModelError(string.Empty, $"Unable to modify order because the order is not in '{OrderStatus.CREATED}' or '{OrderStatus.PROCESSING}' state.");
+                return ValidationProblem();
+            }
+
+            return await UpdateStatus(new OrderStatusDTO { Status = OrderStatus.CANCELED, Version = versionDTO.Version }, order);
         }
 
         private bool OrderExists(long id)

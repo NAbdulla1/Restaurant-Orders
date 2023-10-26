@@ -3,12 +3,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Restaurant_Orders.Models.DTOs
 {
-    public class OrderStatusDTO
+    public class OrderStatusDTO : VersionDTO
     {
         [Required]
         public OrderStatus Status {  get; set; }
-
-        [Required]
-        public Guid? Version { get; set; }
     }
 }
