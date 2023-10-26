@@ -249,6 +249,33 @@ namespace Restaurant_Orders.Controllers
             return await UpdateStatus(new OrderStatusDTO { Status = OrderStatus.CANCELED, Version = versionDTO.Version }, order);
         }
 
+        [HttpPost("{id}/pay")]
+        [Authorize(Roles = "Customer")]
+        public async Task<ActionResult<Order>> PayOrder(long id, VersionDTO versionDTO)
+        {
+            var order = await _context.Orders.Include("OrderItems").FirstOrDefaultAsync(o => o.Id == id);
+            if (order == null)
+            {
+                return Problem(
+                    title: "Unable to save changes. The order was deleted by someone else.",
+                    statusCode: 404
+                );
+            }
+
+            if (order.CustomerId != _userService.GetCurrentUser(HttpContext).Id)
+            {
+                return Problem(title: "Not allowed to cancel other users order.", statusCode: 403);
+            }
+
+            if (order.Status != OrderStatus.PROCESSING)
+            {
+                ModelState.AddModelError(string.Empty, $"Unable to modify order because the order is not in '{OrderStatus.PROCESSING}' state.");
+                return ValidationProblem();
+            }
+
+            return await UpdateStatus(new OrderStatusDTO { Status = OrderStatus.BILLED, Version = versionDTO.Version }, order);
+        }
+
         private bool OrderExists(long id)
         {
             return (_context.Orders?.Any(e => e.Id == id)).GetValueOrDefault();
