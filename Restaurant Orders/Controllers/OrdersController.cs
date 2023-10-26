@@ -61,10 +61,19 @@ namespace Restaurant_Orders.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "RestaurantOwner")]
+        [Authorize(Roles = "RestaurantOwner,Customer")]
         public async Task<ActionResult<Order>> GetOrder(long id)
         {
-            var order = await _context.Orders.Include("OrderItems").FirstOrDefaultAsync(o => o.Id == id);
+            var user = _userService.GetCurrentUser(HttpContext);
+            Order? order = null;
+            if (user != null && (await _context.Users.FindAsync(user.Id))?.UserType == Enums.UserType.Customer)
+            {
+                order = await _context.Orders.Include("OrderItems").FirstOrDefaultAsync(o => o.Id == id && o.CustomerId == user.Id);
+            }
+            else
+            {
+                order = await _context.Orders.Include("OrderItems").FirstOrDefaultAsync(o => o.Id == id);
+            }
 
             if (order == null)
             {
