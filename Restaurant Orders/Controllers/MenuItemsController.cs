@@ -70,21 +70,7 @@ namespace Restaurant_Orders.Controllers
             _context.MenuItems.Attach(menuItem);
             _context.Entry(menuItem).State = EntityState.Modified;
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!MenuItemExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            await _context.SaveChangesAsync();
 
             return Ok(menuItem);
         }
