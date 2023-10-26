@@ -39,11 +39,7 @@ namespace Restaurant_Orders.Controllers
         [Authorize(Roles = "RestaurantOwner,Customer")]
         public async Task<ActionResult<Order>> GetOrder(long id)
         {
-            if (_context.Orders == null)
-            {
-                return NotFound();
-            }
-            var order = await _context.Orders.FindAsync(id);
+            var order = await _context.Orders.Include("OrderItems").FirstOrDefaultAsync(o => o.Id == id);
 
             if (order == null)
             {
@@ -57,17 +53,20 @@ namespace Restaurant_Orders.Controllers
         [Authorize(Roles = "Customer")]
         public async Task<IActionResult> UpdateOrder(long id, OrderUpdateDTO orderData)
         {
-            if (!orderData.AddMenuItemIds.Any() && !orderData.RemoveMenuItemIds.Any())
+            bool validationProblem = CustomValidation(orderData);
+
+            if (validationProblem)
             {
-                ModelState.AddModelError(nameof(orderData.AddMenuItemIds), $"Either of {nameof(orderData.AddMenuItemIds)} or {nameof(orderData.RemoveMenuItemIds)} field is required.");
-                ModelState.AddModelError(nameof(orderData.RemoveMenuItemIds), $"Either of {nameof(orderData.RemoveMenuItemIds)} or {nameof(orderData.AddMenuItemIds)} field is required.");
                 return ValidationProblem();
             }
 
             var order = await _context.Orders.Include("OrderItems").FirstOrDefaultAsync(o => o.Id == id);
             if (order == null)
             {
-                return NotFound();
+                return Problem(
+                    title: "Unable to save changes. The order was deleted by someone else.",
+                    statusCode: 404
+                );
             }
 
             try
@@ -76,10 +75,13 @@ namespace Restaurant_Orders.Controllers
                 _context.OrderItems.RemoveRange(deleteExistingOrderItems);
 
                 await _orderService.AddOrderItems(orderData.AddMenuItemIds, order);
-
-                order.Version = orderData.Version.Value;
+                order.Version = Guid.NewGuid();
 
                 _context.Entry(order).State = EntityState.Modified;
+
+#pragma warning disable 8629
+                _context.Entry(order).Property("Version").OriginalValue = orderData.Version.Value;
+#pragma warning restore 8629
 
                 await _context.SaveChangesAsync();
             }
@@ -92,15 +94,39 @@ namespace Restaurant_Orders.Controllers
             {
                 if (!OrderExists(id))
                 {
-                    return NotFound();
+                    return Problem(
+                        title: "Unable to save changes. The order was deleted by someone else.",
+                        statusCode: 404
+                    );
                 }
                 else
                 {
-                    throw;
+                    return Problem(
+                        title: "The record you attempted to edit was modified by another user after you got the original value."
+                    );
                 }
             }
 
             return Ok(order);
+        }
+
+        private bool CustomValidation(OrderUpdateDTO orderData)
+        {
+            var validationProblem = false;
+            if (!orderData.AddMenuItemIds.Any() && !orderData.RemoveMenuItemIds.Any())
+            {
+                ModelState.AddModelError(nameof(orderData.AddMenuItemIds), $"Either of {nameof(orderData.AddMenuItemIds)} or {nameof(orderData.RemoveMenuItemIds)} field is required.");
+                ModelState.AddModelError(nameof(orderData.RemoveMenuItemIds), $"Either of {nameof(orderData.RemoveMenuItemIds)} or {nameof(orderData.AddMenuItemIds)} field is required.");
+                validationProblem = true;
+            }
+
+            if (orderData.Version == null)
+            {
+                ModelState.AddModelError(nameof(orderData.Version), $"The {nameof(orderData.Version)} field is required.");
+                validationProblem = true;
+            }
+
+            return validationProblem;
         }
 
         [HttpPost]
@@ -123,20 +149,36 @@ namespace Restaurant_Orders.Controllers
             }
         }
 
-        [HttpDelete("{id}")]
+        [HttpDelete("{id}/{version:Guid?}")]
         [Authorize(Roles = "RestaurantOwner")]
-        public async Task<IActionResult> DeleteOrder(long id)
+        public async Task<IActionResult> DeleteOrder(long id, Guid? version)
         {
             var order = await _context.Orders.FindAsync(id);
             if (order == null)
             {
-                return NotFound();
+                return Problem(
+                    title: "Unable to save changes. The order was deleted by someone else.",
+                    statusCode: 404
+                );
             }
 
-            _context.Orders.Remove(order);
-            await _context.SaveChangesAsync();
+            try
+            {
+                _context.Entry(order).State = EntityState.Deleted;
+                if (version != null)
+                {
+                    _context.Entry(order).Property("Version").OriginalValue = version;
+                }
+                await _context.SaveChangesAsync();
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Problem(
+                    title: "The record you attempted to delete was modified by another user after you got the original value. Please fetch the order again to get new version."
+                );
+            }
         }
 
         private bool OrderExists(long id)
