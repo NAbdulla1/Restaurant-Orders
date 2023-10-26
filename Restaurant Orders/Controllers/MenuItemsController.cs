@@ -2,8 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Restaurant_Orders.Data;
-using Restaurant_Orders.Data.Entities;
 using Restaurant_Orders.Extensions;
+using Restaurant_Orders.Models;
 using Restaurant_Orders.Models.DTOs;
 using Restaurant_Orders.Services;
 

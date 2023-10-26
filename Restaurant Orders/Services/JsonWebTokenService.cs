@@ -1,6 +1,6 @@
 ﻿using Microsoft.IdentityModel.Tokens;
-using Restaurant_Orders.Data.Entities;
 using Restaurant_Orders.Extensions;
+using Restaurant_Orders.Models;
 using Restaurant_Orders.Models.Config;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;

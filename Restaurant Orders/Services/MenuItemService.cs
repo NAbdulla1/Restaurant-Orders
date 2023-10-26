@@ -1,4 +1,4 @@
-﻿using Restaurant_Orders.Data.Entities;
+﻿using Restaurant_Orders.Models;
 using Restaurant_Orders.Models.DTOs;
 using System.Linq.Expressions;
 

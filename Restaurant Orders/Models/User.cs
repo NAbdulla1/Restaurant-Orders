@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Restaurant_Orders.Data.Entities
+namespace Restaurant_Orders.Models
 {
     [Table("users")]
     [Index(nameof(Email), IsUnique = true)]

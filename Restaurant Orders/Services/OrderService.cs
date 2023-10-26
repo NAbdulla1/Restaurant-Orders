@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Restaurant_Orders.Data;
-using Restaurant_Orders.Data.Entities;
 using Restaurant_Orders.Exceptions;
+using Restaurant_Orders.Models;
 using Restaurant_Orders.Models.DTOs;
 using System.Linq.Expressions;
 

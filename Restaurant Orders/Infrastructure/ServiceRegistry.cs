@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Restaurant_Orders.Authorizations;
-using Restaurant_Orders.Data.Entities;
+using Restaurant_Orders.Models;
 using Restaurant_Orders.Services;
 
 namespace Restaurant_Orders.Infrastructure
