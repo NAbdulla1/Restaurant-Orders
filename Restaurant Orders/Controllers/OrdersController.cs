@@ -42,6 +42,24 @@ namespace Restaurant_Orders.Controllers
             return Ok(page);
         }
 
+        [HttpGet("customer")]
+        [Authorize(Roles = "Customer")]
+        public async Task<ActionResult<PagedData<Order>>> GetOrder([FromQuery] IndexingDTO indexData)
+        {
+            if (indexData.SortBy != null && !typeof(Order).FieldExists(indexData.SortBy))
+            {
+                ModelState.AddModelError(nameof(indexData.SortBy), "Can't find the provided sort property.");
+                return ValidationProblem();
+            }
+
+            var orderFilters = new OrderFilterDTO { CustomerId = _userService.GetCurrentUser(HttpContext).Id };
+
+            var query = _orderService.PrepareIndexQuery(_context.Orders.Include("OrderItems").Where(order => true), indexData, orderFilters);
+            var page = await _paginationService.Paginate(query, indexData);
+
+            return Ok(page);
+        }
+
         [HttpGet("{id}")]
         [Authorize(Roles = "RestaurantOwner")]
         public async Task<ActionResult<Order>> GetOrder(long id)
