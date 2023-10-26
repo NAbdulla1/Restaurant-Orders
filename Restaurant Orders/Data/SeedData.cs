@@ -1,13 +1,12 @@
-﻿using Restaurant_Orders.Data;
-using Restaurant_Orders.Data.Entities;
+﻿using Restaurant_Orders.Data.Entities;
 using Restaurant_Orders.Models;
 using Restaurant_Orders.Services;
 
-namespace Restaurant_Orders.Extensions
+namespace Restaurant_Orders.Data
 {
-    public static class AdminSeeder
+    public class SeedData
     {
-        public static void SeedAdmin(this WebApplication app)
+        public static void SeedAdmin(WebApplication app)
         {
             using (var scope = app.Services.CreateScope())
             {

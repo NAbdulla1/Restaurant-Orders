@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Restaurant_Orders.Authorizations;
 using Restaurant_Orders.Data;
-using Restaurant_Orders.Extensions;
 using Restaurant_Orders.Infrastructure;
 using Restaurant_Orders.Models;
 using System.Text;
@@ -58,7 +57,7 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-app.SeedAdmin();
+SeedData.SeedAdmin(app);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
