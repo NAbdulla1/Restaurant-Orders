@@ -1,4 +1,4 @@
-﻿namespace Restaurant_Orders.Models
+﻿namespace Restaurant_Orders.Models.Config
 {
     public class JWTConfigData
     {

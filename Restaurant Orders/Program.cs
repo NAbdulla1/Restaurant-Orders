@@ -5,7 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Restaurant_Orders.Authorizations;
 using Restaurant_Orders.Data;
 using Restaurant_Orders.Infrastructure;
-using Restaurant_Orders.Models;
+using Restaurant_Orders.Models.Config;
 using System.Text;
 using System.Text.Json.Serialization;
 

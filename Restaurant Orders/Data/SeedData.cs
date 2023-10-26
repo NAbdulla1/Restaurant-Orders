@@ -1,5 +1,5 @@
 ﻿using Restaurant_Orders.Data.Entities;
-using Restaurant_Orders.Models;
+using Restaurant_Orders.Models.Config;
 using Restaurant_Orders.Services;
 
 namespace Restaurant_Orders.Data
