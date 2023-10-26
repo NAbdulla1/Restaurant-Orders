@@ -76,6 +76,17 @@ namespace Restaurant_Orders.Controllers
                 );
             }
 
+            if (order.CustomerId != _userService.GetCurrentUser(HttpContext).Id)
+            {
+                return Problem(title: "Not allowed to update other users order.", statusCode: 403);
+            }
+
+            if (order.Status != OrderStatus.CREATED && order.Status != OrderStatus.PROCESSING)
+            {
+                ModelState.AddModelError(string.Empty, $"Unable to modify order because the order is not in '{OrderStatus.CREATED}' or '{OrderStatus.PROCESSING}' state.");
+                return ValidationProblem();
+            }
+
             try
             {
                 List<OrderItem> deleteExistingOrderItems = _orderService.RemoveExistingOrderItems(orderData.RemoveMenuItemIds, order);
