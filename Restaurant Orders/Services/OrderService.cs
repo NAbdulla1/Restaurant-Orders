@@ -53,14 +53,10 @@ namespace Restaurant_Orders.Services
                 var existingOrderItem = order.OrderItems.Where(oi => oi.MenuItemId == orderItem.MenuItemId).FirstOrDefault();
                 if (existingOrderItem != null)
                 {
-                    if (existingOrderItem.MenuItemPrice == orderItem.MenuItemPrice)
-                    {
-                        existingOrderItem.Quantity += orderItem.Quantity;
-                    }
-                    else
-                    {
-                        addAsNew.Add(orderItem);
-                    }
+                    existingOrderItem.Quantity += orderItem.Quantity;
+                    existingOrderItem.MenuItemName = orderItem.MenuItemName;
+                    existingOrderItem.MenuItemPrice = orderItem.MenuItemPrice;
+                    existingOrderItem.MenuItemDescription = orderItem.MenuItemDescription;
                 }
                 else
                 {
