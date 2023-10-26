@@ -16,27 +16,34 @@ namespace Restaurant_Orders.Controllers
         private readonly RestaurantContext _context;
         private readonly IUserService _userService;
         private readonly IOrderService _orderService;
+        private readonly IPaginationService<Order> _paginationService;
 
-        public OrdersController(RestaurantContext context, IUserService userService, IOrderService orderService)
+        public OrdersController(RestaurantContext context, IUserService userService, IOrderService orderService, IPaginationService<Order> paginationService)
         {
             _context = context;
             _userService = userService;
             _orderService = orderService;
+            _paginationService = paginationService;
         }
 
         [HttpGet]
-        [Authorize(Roles = "RestaurantOwner,Customer")]
-        public async Task<ActionResult<IEnumerable<Order>>> GetOrder()
+        [Authorize(Roles = "RestaurantOwner")]
+        public async Task<ActionResult<PagedData<Order>>> GetOrder([FromQuery] IndexingDTO indexData, [FromQuery] OrderFilterDTO orderFilters)
         {
-            if (_context.Orders == null)
+            if (indexData.SortBy != null && !typeof(Order).FieldExists(indexData.SortBy))
             {
-                return NotFound();
+                ModelState.AddModelError(nameof(indexData.SortBy), "Can't find the provided sort property.");
+                return ValidationProblem();
             }
-            return await _context.Orders.Include("OrderItems").ToListAsync();
+
+            var query = _orderService.PrepareIndexQuery(_context.Orders.Include("OrderItems").Where(order => true), indexData, orderFilters);
+            var page = await _paginationService.Paginate(query, indexData);
+
+            return Ok(page);
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "RestaurantOwner,Customer")]
+        [Authorize(Roles = "RestaurantOwner")]
         public async Task<ActionResult<Order>> GetOrder(long id)
         {
             var order = await _context.Orders.Include("OrderItems").FirstOrDefaultAsync(o => o.Id == id);

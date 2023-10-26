@@ -16,6 +16,7 @@ namespace Restaurant_Orders.Infrastructure
                 .AddScoped<IUserService, UserService>()
                 .AddScoped<IMenuItemService, MenuItemService>()
                 .AddScoped<IPaginationService<MenuItem>, PaginationService<MenuItem>>()
+                .AddScoped<IPaginationService<Order>, PaginationService<Order>>()
                 .AddScoped<IOrderService, OrderService>();
         }
     }

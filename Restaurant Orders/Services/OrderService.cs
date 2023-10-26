@@ -2,6 +2,8 @@
 using Restaurant_Orders.Data;
 using Restaurant_Orders.Data.Entities;
 using Restaurant_Orders.Exceptions;
+using Restaurant_Orders.Models.DTOs;
+using System.Linq.Expressions;
 
 namespace Restaurant_Orders.Services
 {
@@ -10,6 +12,7 @@ namespace Restaurant_Orders.Services
         Task AddOrderItems(ICollection<long> addMenuItemIds, Order order);
         Task<Order> BuildOrder(ICollection<long> menuItemIds, long id);
         List<OrderItem> RemoveExistingOrderItems(ICollection<long> removeMenuItemIds, Order order);
+        IQueryable<Order> PrepareIndexQuery(IQueryable<Order> query, IndexingDTO indexData, OrderFilterDTO orderFilters);
     }
 
     public class OrderService : IOrderService
@@ -142,6 +145,85 @@ namespace Restaurant_Orders.Services
         private static decimal CalculateOrderTotal(ICollection<OrderItem> orderItems)
         {
             return orderItems.Aggregate(0.0M, (sum, oi) => sum + oi.MenuItemPrice * oi.Quantity);
+        }
+
+        public IQueryable<Order> PrepareIndexQuery(IQueryable<Order> query, IndexingDTO indexData, OrderFilterDTO orderFilters)
+        {
+            if (indexData.SearchBy != null)
+            {
+                query = AddSearchQuery(query, indexData.SearchBy);
+            }
+
+            if (orderFilters.CustomerId != null)
+            {
+                query = AddCustomerQuery(query, orderFilters.CustomerId.GetValueOrDefault());
+            }
+
+            if (orderFilters.Status != null)
+            {
+                query = AddOrderStatusQuery(query, orderFilters.Status);
+            }
+
+            if (indexData.SortBy != null)
+            {
+                query = AddSortQuery(query, indexData.SortBy, indexData.SortOrder);
+            }
+
+            return query;
+        }
+
+        private IQueryable<Order> AddSearchQuery(IQueryable<Order> query, string searchTerm)
+        {
+            query = query.Where(order =>
+                _dbContext.OrderItems
+                    .Where(oi => oi.MenuItemName != null && oi.MenuItemName.Contains(searchTerm))
+                    .Select(oi => oi.OrderId)
+                        .Contains(order.Id));
+
+            return query;
+        }
+
+        private static IQueryable<Order> AddCustomerQuery(IQueryable<Order> query, long customerId)
+        {
+            query = query.Where(order => order.CustomerId == customerId);
+
+            return query;
+        }
+
+        private static IQueryable<Order> AddOrderStatusQuery(IQueryable<Order> query, OrderStatus? status)
+        {
+            query = query.Where(order => order.Status == status);
+
+            return query;
+        }
+
+        private static IQueryable<Order> AddSortQuery(IQueryable<Order> query, string sortColumn, string? sortDirection)
+        {
+            if (sortDirection == null || sortDirection == "asc")
+            {
+                query = query.OrderBy(GetOrderExpression(sortColumn));
+            }
+            else
+            {
+                query = query.OrderByDescending(GetOrderExpression(sortColumn));
+            }
+
+            return query;
+        }
+
+        private static Expression<Func<Order, object?>> GetOrderExpression(string sortColumn)
+        {
+            switch (sortColumn.ToLower())
+            {
+                case "customerid":
+                    return item => item.CustomerId;
+                case "createdat":
+                    return item => item.CreatedAt;
+                case "total":
+                    return item => item.Total;
+                default:
+                    return item => item.Id;
+            }
         }
     }
 }
