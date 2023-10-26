@@ -27,7 +27,7 @@ namespace Restaurant_Orders.Services
 
         public User PrepareCustomer(User customer)
         {
-            customer.UserType = Enums.UserType.Customer;
+            customer.UserType = UserType.Customer;
             customer.Password = _passwordService.HashPassword(customer.Password);
 
             return customer;

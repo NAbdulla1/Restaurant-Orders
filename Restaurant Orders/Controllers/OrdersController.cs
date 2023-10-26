@@ -66,7 +66,7 @@ namespace Restaurant_Orders.Controllers
         {
             var user = _userService.GetCurrentUser(HttpContext);
             Order? order = null;
-            if (user != null && (await _context.Users.FindAsync(user.Id))?.UserType == Enums.UserType.Customer)
+            if (user != null && (await _context.Users.FindAsync(user.Id))?.UserType == UserType.Customer)
             {
                 order = await _context.Orders.Include("OrderItems").FirstOrDefaultAsync(o => o.Id == id && o.CustomerId == user.Id);
             }

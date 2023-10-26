@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Restaurant_Orders.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -39,5 +38,10 @@ namespace Restaurant_Orders.Data.Entities
         public UserType UserType { get; set; }
 
         public ICollection<Order> Orders { get; set; } = new List<Order>();
+    }
+
+    public enum UserType
+    {
+        RestaurantOwner = 1, Customer = 2
     }
 }

@@ -1,6 +1,5 @@
 ﻿using Restaurant_Orders.Data;
 using Restaurant_Orders.Data.Entities;
-using Restaurant_Orders.Enums;
 using Restaurant_Orders.Models;
 using Restaurant_Orders.Services;
 
