@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Restaurant_Orders.Authorizations;
@@ -44,7 +43,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy(OwnProfileModifyRequirement.OwnPMR, policy =>
+    options.AddPolicy(OwnProfileModifyRequirement.Name, policy =>
     {
         policy.Requirements.Add(new OwnProfileModifyRequirement());
     });

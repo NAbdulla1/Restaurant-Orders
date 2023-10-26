@@ -10,7 +10,7 @@ namespace Restaurant_Orders.Infrastructure
         public static IServiceCollection RegisterServices(this IServiceCollection services)
         {
             return services
-                .AddSingleton<IAuthorizationHandler, OwnProfileModifyHandler>()
+                .AddScoped<IAuthorizationHandler, OwnProfileModifyHandler>()
                 .AddScoped<IPasswordService, PasswordService>()
                 .AddScoped<ITokenService, JsonWebTokenService>()
                 .AddScoped<IUserService, UserService>()

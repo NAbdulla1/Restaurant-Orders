@@ -32,7 +32,7 @@ namespace Restaurant_Orders.Controllers
         }
 
         [HttpGet("{id:long}")]
-        [Authorize(Policy = OwnProfileModifyRequirement.OwnPMR)]
+        [Authorize(Policy = OwnProfileModifyRequirement.Name)]
         public ActionResult<UserDTO> GetUser(long id) {
             var user = _dbContext.Users.FirstOrDefault(x => x.Id == id);
             if(user == null)
@@ -44,7 +44,7 @@ namespace Restaurant_Orders.Controllers
         }
 
         [HttpPut("{id:long}")]
-        [Authorize(Policy = OwnProfileModifyRequirement.OwnPMR)]
+        [Authorize(Policy = OwnProfileModifyRequirement.Name)]
         [Consumes("application/json")]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<UserDTO>> UpdateUser(long id, UserUpdateDTO userUpdate)
