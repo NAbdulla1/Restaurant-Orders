@@ -6,6 +6,7 @@ or the [`appsettings.json`](Restaurant%20Orders%2Fappsettings.json) file(delete 
 - Define the Restaurant Owner or Admin name and email address in the properties under the `OwnerInfo` property.
 - Change the JWT expiration duration in the `ExpireInMinutes` property under the `JWTInfo` property if necessary.
 - Change the `DefaultPageSize` if necessary to alter the default page size used in pagination of data if no `pageSize` is provided with the request.
+- Change the `ServerErrorLogFile` property to set the path of server error log if necessary.
 - Create the secrets:
   - Admin Password: `dotnet user-secrets set OwnerInfo:Password <password>`.
   - JWT Secret: `dotnet user-secrets set JWTInfo:Secret <a base64 encoded string>`. The base 64 encoded string can be generated from random bytes in "Git Bash" in windows with the command: `openssl rand -base64 32`.

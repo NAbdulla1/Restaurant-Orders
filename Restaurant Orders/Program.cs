@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using Restaurant_Orders.Authorizations;
 using Restaurant_Orders.Data;
 using Restaurant_Orders.Extensions;
+using Restaurant_Orders.Filters;
 using Restaurant_Orders.Infrastructure;
 using Restaurant_Orders.Models.Config;
 using System.Text;
@@ -12,7 +13,10 @@ using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add(typeof(ServerExceptionFilter));
+})
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
