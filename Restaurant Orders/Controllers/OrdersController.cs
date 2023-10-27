@@ -7,6 +7,7 @@ using Restaurant_Orders.Extensions;
 using Restaurant_Orders.Models;
 using Restaurant_Orders.Models.DTOs;
 using Restaurant_Orders.Services;
+using System.Net.Mime;
 
 namespace Restaurant_Orders.Controllers
 {
@@ -29,6 +30,7 @@ namespace Restaurant_Orders.Controllers
 
         [HttpGet]
         [Authorize(Roles = "RestaurantOwner")]
+        [Produces(MediaTypeNames.Application.Json)]
         public async Task<ActionResult<PagedData<Order>>> GetOrder([FromQuery] IndexingDTO indexData, [FromQuery] OrderFilterDTO orderFilters)
         {
             if (indexData.SortBy != null && !typeof(Order).FieldExists(indexData.SortBy))
@@ -45,6 +47,7 @@ namespace Restaurant_Orders.Controllers
 
         [HttpGet("customer")]
         [Authorize(Roles = "Customer")]
+        [Produces(MediaTypeNames.Application.Json)]
         public async Task<ActionResult<PagedData<Order>>> GetOrder([FromQuery] IndexingDTO indexData)
         {
             if (indexData.SortBy != null && !typeof(Order).FieldExists(indexData.SortBy))
@@ -63,6 +66,9 @@ namespace Restaurant_Orders.Controllers
 
         [HttpGet("{id}")]
         [Authorize(Roles = "RestaurantOwner,Customer")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<Order>> GetOrder(long id)
         {
             var user = _userService.GetCurrentUser(HttpContext);
@@ -86,6 +92,11 @@ namespace Restaurant_Orders.Controllers
 
         [HttpPatch("{id}/status")]
         [Authorize(Roles = "RestaurantOwner")]
+        [Consumes(MediaTypeNames.Application.Json)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<Order>> UpdateOrderStatus(long id, OrderStatusDTO orderStatusDTO)
         {
             var order = await _context.Orders.FirstOrDefaultAsync(o => o.Id == id);
@@ -121,6 +132,12 @@ namespace Restaurant_Orders.Controllers
 
         [HttpPatch("{id}")]
         [Authorize(Roles = "Customer")]
+        [Consumes(MediaTypeNames.Application.Json)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<Order>> UpdateOrder(long id, OrderUpdateDTO orderData)
         {
             bool validationProblem = CustomValidation(orderData);
@@ -200,6 +217,10 @@ namespace Restaurant_Orders.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Customer")]
+        [Consumes(MediaTypeNames.Application.Json)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<Order>> CreateOrder(NewOrderDTO newOrderDTO)
         {
             try
@@ -220,6 +241,9 @@ namespace Restaurant_Orders.Controllers
 
         [HttpDelete("{id}/{version:Guid?}")]
         [Authorize(Roles = "RestaurantOwner")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> DeleteOrder(long id, Guid? version)
         {
             var order = await _context.Orders.FindAsync(id);
@@ -245,13 +269,20 @@ namespace Restaurant_Orders.Controllers
             catch (DbUpdateConcurrencyException)
             {
                 return Problem(
-                    title: "The record you attempted to delete was modified by another user after you got the original value. Please fetch the order again to get new version."
+                    title: "The record you attempted to delete was modified by another user after you got the original value. Please fetch the order again to get new version.",
+                    statusCode: 404
                 );
             }
         }
 
         [HttpPost("{id}/cancel")]
         [Authorize(Roles = "Customer")]
+        [Consumes(MediaTypeNames.Application.Json)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<Order>> CancelOrder(long id, VersionDTO versionDTO)
         {
             var order = await _context.Orders.Include("OrderItems").FirstOrDefaultAsync(o => o.Id == id);
@@ -279,6 +310,12 @@ namespace Restaurant_Orders.Controllers
 
         [HttpPost("{id}/pay")]
         [Authorize(Roles = "Customer")]
+        [Consumes(MediaTypeNames.Application.Json)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<Order>> PayOrder(long id, VersionDTO versionDTO)
         {
             var order = await _context.Orders.Include("OrderItems").FirstOrDefaultAsync(o => o.Id == id);
@@ -321,7 +358,8 @@ namespace Restaurant_Orders.Controllers
             else
             {
                 return Problem(
-                    title: "The record you attempted to edit was modified by another user after you got the original value."
+                    title: "The record you attempted to edit was modified by another user after you got the original value.",
+                    statusCode: 400
                 );
             }
         }

@@ -8,6 +8,7 @@ using Restaurant_Orders.Extensions;
 using Restaurant_Orders.Models;
 using Restaurant_Orders.Models.DTOs;
 using Restaurant_Orders.Services;
+using System.Net.Mime;
 
 namespace Restaurant_Orders.Controllers
 {
@@ -26,6 +27,7 @@ namespace Restaurant_Orders.Controllers
 
         [HttpGet]
         [Authorize(Roles = "RestaurantOwner")]
+        [Produces(MediaTypeNames.Application.Json)]
         public ActionResult<IAsyncEnumerable<UserDTO>> GetUsers()
         {
             return Ok(_dbContext.Users.Select(user => user.ToUserDTO()).AsAsyncEnumerable());
@@ -33,6 +35,9 @@ namespace Restaurant_Orders.Controllers
 
         [HttpGet("{id:long}")]
         [Authorize(Policy = OwnProfileModifyRequirement.Name)]
+        [Consumes(MediaTypeNames.Application.Json)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<UserDTO> GetUser(long id) {
             var user = _dbContext.Users.FirstOrDefault(x => x.Id == id);
             if(user == null)
@@ -45,7 +50,9 @@ namespace Restaurant_Orders.Controllers
 
         [HttpPut("{id:long}")]
         [Authorize(Policy = OwnProfileModifyRequirement.Name)]
-        [Consumes("application/json")]
+        [Consumes(MediaTypeNames.Application.Json)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<UserDTO>> UpdateUser(long id, UserUpdateDTO userUpdate)
         {
@@ -63,7 +70,8 @@ namespace Restaurant_Orders.Controllers
         }
 
         [HttpPost("register")]
-        [Consumes("application/json")]
+        [Consumes(MediaTypeNames.Application.Json)]
+        [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<UserDTO>> RegisterUser([Bind("FirstName,LastName,Email,Password")] User customer)
         {
@@ -83,9 +91,10 @@ namespace Restaurant_Orders.Controllers
         }
 
         [HttpPost("login")]
-        [Consumes("application/json")]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [Consumes(MediaTypeNames.Application.Json)]
+        [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<AccessTokenDTO>> LoginUser(LoginPayloadDTO loginPayload)
         {
             var savedUser = await _dbContext.Users.Where(u => u.Email == loginPayload.Email).FirstOrDefaultAsync();

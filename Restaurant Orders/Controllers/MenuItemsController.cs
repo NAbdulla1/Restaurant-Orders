@@ -6,6 +6,7 @@ using Restaurant_Orders.Extensions;
 using Restaurant_Orders.Models;
 using Restaurant_Orders.Models.DTOs;
 using Restaurant_Orders.Services;
+using System.Net.Mime;
 
 namespace Restaurant_Orders.Controllers
 {
@@ -26,6 +27,7 @@ namespace Restaurant_Orders.Controllers
 
         [HttpGet]
         [Authorize(Roles = "RestaurantOwner,Customer")]
+        [Produces(MediaTypeNames.Application.Json)]
         public async Task<ActionResult<PagedData<MenuItem>>> GetMenuItems([FromQuery] IndexingDTO indexData)
         {
             if (indexData.SortBy != null && !typeof(MenuItem).FieldExists(indexData.SortBy))
@@ -43,6 +45,9 @@ namespace Restaurant_Orders.Controllers
 
         [HttpGet("{id:long}")]
         [Authorize(Roles = "RestaurantOwner,Customer")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<MenuItem>> GetMenuItem(long id)
         {
             var menuItem = await _context.MenuItems.FindAsync(id);
@@ -57,8 +62,18 @@ namespace Restaurant_Orders.Controllers
 
         [HttpPut("{id:long}")]
         [Authorize(Roles = "RestaurantOwner")]
-        public async Task<IActionResult> UpdateMenuItem(long id, MenuItemDTO menuItemDto)
+        [Consumes(MediaTypeNames.Application.Json)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public async Task<ActionResult<MenuItem>> UpdateMenuItem(long id, MenuItemDTO menuItemDto)
         {
+            if(!MenuItemExists(id))
+            {
+                return NotFound();
+            }
+
             var menuItem = new MenuItem
             {
                 Id = id,
@@ -77,6 +92,10 @@ namespace Restaurant_Orders.Controllers
 
         [HttpPost]
         [Authorize(Roles = "RestaurantOwner")]
+        [Consumes(MediaTypeNames.Application.Json)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status201Created)]
         public async Task<ActionResult<MenuItem>> CreateMenuItem(MenuItemDTO menuItemDto)
         {
             var menuItem = new MenuItem
@@ -94,6 +113,9 @@ namespace Restaurant_Orders.Controllers
 
         [HttpDelete("{id:long}")]
         [Authorize(Roles = "RestaurantOwner")]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> DeleteMenuItem(long id)
         {
             var menuItem = await _context.MenuItems.FindAsync(id);
