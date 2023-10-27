@@ -37,7 +37,9 @@ namespace Restaurant_Orders.Controllers
         [Authorize(Policy = OwnProfileModifyRequirement.Name)]
         [Consumes(MediaTypeNames.Application.Json)]
         [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public ActionResult<UserDTO> GetUser(long id) {
             var user = _dbContext.Users.FirstOrDefault(x => x.Id == id);
             if(user == null)
@@ -52,8 +54,10 @@ namespace Restaurant_Orders.Controllers
         [Authorize(Policy = OwnProfileModifyRequirement.Name)]
         [Consumes(MediaTypeNames.Application.Json)]
         [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<ActionResult<UserDTO>> UpdateUser(long id, UserUpdateDTO userUpdate)
         {
             var user = _dbContext.Users.FirstOrDefault(x => x.Id == id);
@@ -72,6 +76,7 @@ namespace Restaurant_Orders.Controllers
         [HttpPost("register")]
         [Consumes(MediaTypeNames.Application.Json)]
         [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<UserDTO>> RegisterUser([Bind("FirstName,LastName,Email,Password")] User customer)
         {
@@ -93,6 +98,7 @@ namespace Restaurant_Orders.Controllers
         [HttpPost("login")]
         [Consumes(MediaTypeNames.Application.Json)]
         [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<AccessTokenDTO>> LoginUser(LoginPayloadDTO loginPayload)
