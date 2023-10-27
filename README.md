@@ -1,6 +1,7 @@
 # Restaurant Orders
 ## Initial Configuration
-Update the [`appsettings.Development.json`](/Restaurant Orders/appsettings.Development.json) to speficy the following values:
+Update the [`appsettings.Development.json`](Restaurant%20Orders%2Fappsettings.Development.json)
+or the [`appsettings.json`](Restaurant%20Orders%2Fappsettings.json) file(delete the [`appsettings.Development.json`](Restaurant%20Orders%2Fappsettings.Development.json) file in that case) to speficy the following values:
 - Define the MSSQL database connection string in the `Database` property under the `ConnectionStrings` property.
 - Define the Restaurant Owner or Admin name and email address in the properties under the `OwnerInfo` property.
 - Change the JWT expiration duration in the `ExpireInMinutes` property under the `JWTInfo` property if necessary.
