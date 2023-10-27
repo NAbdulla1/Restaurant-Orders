@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Restaurant_Orders.Authorizations;
 using Restaurant_Orders.Data;
+using Restaurant_Orders.Extensions;
 using Restaurant_Orders.Infrastructure;
 using Restaurant_Orders.Models.Config;
 using System.Text;
@@ -51,7 +52,7 @@ builder.Services.AddAuthorization(options =>
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options => options.ConfigureSwaggerAuth());
 
 var app = builder.Build();
 
