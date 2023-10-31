@@ -1,4 +1,6 @@
-﻿namespace Restaurant_Orders.Models.DTOs
+﻿using RestaurantOrder.Data.Models;
+
+namespace Restaurant_Orders.Models.DTOs
 {
     public class OrderFilterDTO
     {

@@ -1,13 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Restaurant_Orders.Authorizations;
-using Restaurant_Orders.Data;
 using Restaurant_Orders.Exceptions;
 using Restaurant_Orders.Extensions;
-using Restaurant_Orders.Models;
 using Restaurant_Orders.Models.DTOs;
 using Restaurant_Orders.Services;
+using RestaurantOrder.Data.Models;
+using RestaurantOrder.Data.Repositories;
 using System.Net.Mime;
 
 namespace Restaurant_Orders.Controllers
@@ -16,21 +15,21 @@ namespace Restaurant_Orders.Controllers
     [Route("api/user")]
     public class UserController : Controller
     {
-        private readonly RestaurantContext _dbContext;
+        private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
 
-        public UserController(RestaurantContext dbContext, IUserService userService)
+        public UserController(IUserRepository userRepository, IUserService userService)
         {
-            _dbContext = dbContext;
+            _userRepository = userRepository;
             _userService = userService;
         }
 
         [HttpGet]
         [Authorize(Roles = "RestaurantOwner")]
         [Produces(MediaTypeNames.Application.Json)]
-        public ActionResult<IAsyncEnumerable<UserDTO>> GetUsers()
+        public async Task<ActionResult<IAsyncEnumerable<UserDTO>>> GetUsers()
         {
-            return Ok(_dbContext.Users.Select(user => user.ToUserDTO()).AsAsyncEnumerable());
+            return Ok((await _userRepository.GetAll()).Select(user => user.ToUserDTO()));
         }
 
         [HttpGet("{id:long}")]
@@ -40,8 +39,8 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public ActionResult<UserDTO> GetUser(long id) {
-            var user = _dbContext.Users.FirstOrDefault(x => x.Id == id);
+        public async Task<ActionResult<UserDTO>> GetUser(long id) {
+            var user = await _userRepository.GetById(id);
             if(user == null)
             {
                 return NotFound();
@@ -60,7 +59,7 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<ActionResult<UserDTO>> UpdateUser(long id, UserUpdateDTO userUpdate)
         {
-            var user = _dbContext.Users.FirstOrDefault(x => x.Id == id);
+            var user = await _userRepository.GetById(id);
             if (user == null)
             {
                 return NotFound();
@@ -68,7 +67,7 @@ namespace Restaurant_Orders.Controllers
 
             _userService.PrepareUserUpdate(user, userUpdate);
 
-            await _dbContext.SaveChangesAsync();
+            await _userRepository.Commit();
 
             return Ok(user.ToUserDTO());
         }
@@ -80,7 +79,7 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<UserDTO>> RegisterUser([Bind("FirstName,LastName,Email,Password")] User customer)
         {
-            var existingUser = _dbContext.Users.FirstOrDefault(user => user.Email == customer.Email);
+            var existingUser = _userRepository.GetByEmail(customer.Email);
             if(existingUser != null)
             {
                 ModelState.AddModelError(nameof(customer.Email), $"Another user exists with the given email: '{customer.Email}'.");
@@ -89,8 +88,8 @@ namespace Restaurant_Orders.Controllers
 
             customer = _userService.PrepareCustomer(customer);
 
-            _dbContext.Users.Add(customer);
-            await _dbContext.SaveChangesAsync();
+            _userRepository.Add(customer);
+            await _userRepository.Commit();
 
             return CreatedAtAction(nameof(GetUser), new { id = customer.Id }, customer.ToUserDTO());
         }
@@ -103,7 +102,7 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<AccessTokenDTO>> LoginUser(LoginPayloadDTO loginPayload)
         {
-            var savedUser = await _dbContext.Users.Where(u => u.Email == loginPayload.Email).FirstOrDefaultAsync();
+            var savedUser = await _userRepository.GetByEmail(loginPayload.Email);
 
             if (savedUser == null)
             {

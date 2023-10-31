@@ -1,4 +1,4 @@
-﻿using Restaurant_Orders.Models;
+﻿using RestaurantOrder.Data.Models;
 using Restaurant_Orders.Models.DTOs;
 
 namespace Restaurant_Orders.Extensions

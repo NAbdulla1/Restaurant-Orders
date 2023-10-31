@@ -1,11 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Restaurant_Orders.Data;
 using Restaurant_Orders.Extensions;
-using Restaurant_Orders.Models;
 using Restaurant_Orders.Models.DTOs;
 using Restaurant_Orders.Services;
+using RestaurantOrder.Data.Models;
+using RestaurantOrder.Data.Repositories;
 using System.Net.Mime;
 
 namespace Restaurant_Orders.Controllers
@@ -14,13 +13,13 @@ namespace Restaurant_Orders.Controllers
     [Route("api/menu-items")]
     public class MenuItemsController : ControllerBase
     {
-        private readonly RestaurantContext _context;
+        private readonly IMenuItemRepository _menuItemRepository;
         private readonly IMenuItemService _menuItemService;
         private readonly IPaginationService<MenuItem> _paginationService;
 
-        public MenuItemsController(RestaurantContext context, IMenuItemService menuItemService, IPaginationService<MenuItem> paginationService)
+        public MenuItemsController(IMenuItemRepository menuItemRepository, IMenuItemService menuItemService, IPaginationService<MenuItem> paginationService)
         {
-            _context = context;
+            _menuItemRepository = menuItemRepository;
             _menuItemService = menuItemService;
             _paginationService = paginationService;
         }
@@ -36,7 +35,7 @@ namespace Restaurant_Orders.Controllers
                 return ValidationProblem();
             }
 
-            var query = _menuItemService.PrepareIndexQuery(_context.MenuItems.Where(item => true), indexData);
+            var query = _menuItemService.PrepareIndexQuery(_menuItemRepository.GetAll(), indexData);
 
             var page = await _paginationService.Paginate(query, indexData);
 
@@ -50,7 +49,7 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<MenuItem>> GetMenuItem(long id)
         {
-            var menuItem = await _context.MenuItems.FindAsync(id);
+            var menuItem = await _menuItemRepository.GetById(id);
 
             if (menuItem == null)
             {
@@ -69,7 +68,7 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<MenuItem>> UpdateMenuItem(long id, MenuItemDTO menuItemDto)
         {
-            if(!MenuItemExists(id))
+            if (!(await _menuItemRepository.MenuItemExists(id)))
             {
                 return NotFound();
             }
@@ -82,10 +81,9 @@ namespace Restaurant_Orders.Controllers
                 Price = menuItemDto.Price
             };
 
-            _context.MenuItems.Attach(menuItem);
-            _context.Entry(menuItem).State = EntityState.Modified;
+            _menuItemRepository.UpdateMenuItem(menuItem);
 
-            await _context.SaveChangesAsync();
+            await _menuItemRepository.Commit();
 
             return Ok(menuItem);
         }
@@ -105,8 +103,8 @@ namespace Restaurant_Orders.Controllers
                 Price = menuItemDto.Price
             };
 
-            _context.MenuItems.Add(menuItem);
-            await _context.SaveChangesAsync();
+            _menuItemRepository.Add(menuItem);
+            await _menuItemRepository.Commit();
 
             return CreatedAtAction(nameof(GetMenuItem), new { id = menuItem.Id }, menuItem);
         }
@@ -118,21 +116,16 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> DeleteMenuItem(long id)
         {
-            var menuItem = await _context.MenuItems.FindAsync(id);
+            var menuItem = await _menuItemRepository.GetById(id);
             if (menuItem == null)
             {
                 return NotFound();
             }
 
-            _context.MenuItems.Remove(menuItem);
-            await _context.SaveChangesAsync();
+            _menuItemRepository.Delete(menuItem);
+            await _menuItemRepository.Commit();
 
             return NoContent();
-        }
-
-        private bool MenuItemExists(long id)
-        {
-            return (_context.MenuItems?.Any(e => e.Id == id)).GetValueOrDefault();
         }
     }
 }

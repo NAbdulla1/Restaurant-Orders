@@ -7,6 +7,7 @@ using Restaurant_Orders.Extensions;
 using Restaurant_Orders.Filters;
 using Restaurant_Orders.Infrastructure;
 using Restaurant_Orders.Models.Config;
+using RestaurantOrder.Data;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -60,7 +61,7 @@ builder.Services.AddSwaggerGen(options => options.ConfigureSwaggerAuth());
 
 var app = builder.Build();
 
-SeedData.SeedAdmin(app);
+await SeedData.SeedAdmin(app);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

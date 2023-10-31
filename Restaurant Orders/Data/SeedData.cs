@@ -1,27 +1,28 @@
-﻿using Restaurant_Orders.Models;
-using Restaurant_Orders.Models.Config;
+﻿using Restaurant_Orders.Models.Config;
 using Restaurant_Orders.Services;
+using RestaurantOrder.Data.Models;
+using RestaurantOrder.Data.Repositories;
 
 namespace Restaurant_Orders.Data
 {
     public class SeedData
     {
-        public static void SeedAdmin(WebApplication app)
+        public static async Task SeedAdmin(WebApplication app)
         {
             using (var scope = app.Services.CreateScope())
             {
                 var services = scope.ServiceProvider;
 
                 var passwordService = services.GetRequiredService<IPasswordService>();
-                var restaurantContext = services.GetRequiredService<RestaurantContext>();
+                var userRepository = services.GetRequiredService<IUserRepository>();
                 var ownerInfo = app.Configuration.GetRequiredSection(OwnerConfigData.ConfigSectionName).Get<OwnerConfigData>();
 
-                if (restaurantContext.Users.Where(user => user.UserType == UserType.RestaurantOwner).Any())
+                if (await userRepository.HasAnyAdmin())
                 {
                     return;
                 }
 
-                restaurantContext.Users.Add(new User
+                userRepository.Add(new User
                 {
                     FirstName = ownerInfo.FirstName,
                     LastName = ownerInfo.LastName,
@@ -30,7 +31,7 @@ namespace Restaurant_Orders.Data
                     UserType = UserType.RestaurantOwner
                 });
 
-                restaurantContext.SaveChanges();
+                await userRepository.Commit();
             }
         }
     }

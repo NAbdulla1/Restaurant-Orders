@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Restaurant_Orders.Data;
 using Restaurant_Orders.Exceptions;
-using Restaurant_Orders.Models;
 using Restaurant_Orders.Models.DTOs;
+using RestaurantOrder.Data.Models;
+using RestaurantOrder.Data.Repositories;
 using System.Linq.Expressions;
 
 namespace Restaurant_Orders.Services
@@ -17,20 +17,22 @@ namespace Restaurant_Orders.Services
 
     public class OrderService : IOrderService
     {
-        private readonly RestaurantContext _dbContext;
+        private readonly IMenuItemRepository _menuItemRepository;
+        private readonly IOrderItemRepository _orderItemRepository;
 
-        public OrderService(RestaurantContext context)
+        public OrderService(IMenuItemRepository menuItemRepository, IOrderItemRepository orderItemRepository)
         {
-            _dbContext = context;
+            _menuItemRepository = menuItemRepository;
+            _orderItemRepository = orderItemRepository;
         }
 
         public async Task<Order> BuildOrder(ICollection<long> menuItemIds, long customerId)
         {
             Dictionary<long, int> itemCountById = GetItemsCountById(menuItemIds);
 
-            List<MenuItem> menuItems = await CheckAndGetMenuItems(itemCountById);
+            var menuItems = await CheckAndGetMenuItems(itemCountById);
 
-            List<OrderItem> orderItems = BuildOrderItems(menuItems, itemCountById);
+            var orderItems = BuildOrderItems(menuItems, itemCountById);
 
             decimal orderTotal = CalculateOrderTotal(orderItems);
 
@@ -46,9 +48,9 @@ namespace Restaurant_Orders.Services
         {
             Dictionary<long, int> itemCountById = GetItemsCountById(addMenuItemIds);
 
-            List<MenuItem> menuItems = await CheckAndGetMenuItems(itemCountById);
+            var menuItems = await CheckAndGetMenuItems(itemCountById);
 
-            List<OrderItem> orderItems = BuildOrderItems(menuItems, itemCountById);
+            var orderItems = BuildOrderItems(menuItems, itemCountById);
 
             var addAsNew = new List<OrderItem>();
             foreach (OrderItem orderItem in orderItems)
@@ -110,12 +112,9 @@ namespace Restaurant_Orders.Services
                 .ToDictionary(g => g.Key, g => g.Count());
         }
 
-        private async Task<List<MenuItem>> CheckAndGetMenuItems(Dictionary<long, int> itemCountById)
+        private async Task<IEnumerable<MenuItem>> CheckAndGetMenuItems(Dictionary<long, int> itemCountById)
         {
-            var menuItems = await _dbContext.MenuItems
-                .Where(menuItem => itemCountById.Select(entry => entry.Key).Contains(menuItem.Id))
-                .AsNoTracking()
-                .ToListAsync();
+            var menuItems = await _menuItemRepository.GetByIds(itemCountById.Select(item => item.Key).ToList());
 
             var absentIds = itemCountById.Select(entry => entry.Key).Except(menuItems.Select(menuItem => menuItem.Id));
             if (absentIds.Any())
@@ -126,7 +125,7 @@ namespace Restaurant_Orders.Services
             return menuItems;
         }
 
-        private static List<OrderItem> BuildOrderItems(List<MenuItem> menuItems, Dictionary<long, int> itemCountById)
+        private static List<OrderItem> BuildOrderItems(IEnumerable<MenuItem> menuItems, Dictionary<long, int> itemCountById)
         {
             var orderItems = menuItems
                 .Select(menuItemAndQuantity => new OrderItem
@@ -175,8 +174,7 @@ namespace Restaurant_Orders.Services
         private IQueryable<Order> AddSearchQuery(IQueryable<Order> query, string searchTerm)
         {
             query = query.Where(order =>
-                _dbContext.OrderItems
-                    .Where(oi => oi.MenuItemName != null && oi.MenuItemName.Contains(searchTerm))
+                _orderItemRepository.SearchInName(searchTerm)
                     .Select(oi => oi.OrderId)
                         .Contains(order.Id));
 

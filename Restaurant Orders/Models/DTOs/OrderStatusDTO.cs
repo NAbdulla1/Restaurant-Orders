@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using RestaurantOrder.Data.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace Restaurant_Orders.Models.DTOs
 {

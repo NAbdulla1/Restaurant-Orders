@@ -1,4 +1,6 @@
-﻿namespace Restaurant_Orders.Models.Config
+﻿using RestaurantOrder.Data.Models;
+
+namespace Restaurant_Orders.Models.Config
 {
     public class OwnerConfigData : User
     {
