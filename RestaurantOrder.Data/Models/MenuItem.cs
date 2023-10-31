@@ -1,4 +1,4 @@
-﻿namespace Restaurant_Orders.Models
+﻿namespace RestaurantOrder.Data.Models
 {
     public class MenuItem
     {
