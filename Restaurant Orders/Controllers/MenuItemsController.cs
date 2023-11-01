@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Restaurant_Orders.Extensions;
-using Restaurant_Orders.Models.DTOs;
 using Restaurant_Orders.Services;
-using RestaurantOrder.Data.Models;
-using RestaurantOrder.Data.Repositories;
+using RestaurantOrder.Core.DTOs;
+using RestaurantOrder.Core.Exceptions;
 using System.Net.Mime;
 
 namespace Restaurant_Orders.Controllers
@@ -13,31 +13,25 @@ namespace Restaurant_Orders.Controllers
     [Route("api/menu-items")]
     public class MenuItemsController : ControllerBase
     {
-        private readonly IMenuItemRepository _menuItemRepository;
         private readonly IMenuItemService _menuItemService;
-        private readonly IPaginationService<MenuItem> _paginationService;
 
-        public MenuItemsController(IMenuItemRepository menuItemRepository, IMenuItemService menuItemService, IPaginationService<MenuItem> paginationService)
+        public MenuItemsController(IMenuItemService menuItemService)
         {
-            _menuItemRepository = menuItemRepository;
             _menuItemService = menuItemService;
-            _paginationService = paginationService;
         }
 
         [HttpGet]
         [Authorize(Roles = "RestaurantOwner,Customer")]
         [Produces(MediaTypeNames.Application.Json)]
-        public async Task<ActionResult<PagedData<MenuItem>>> GetMenuItems([FromQuery] IndexingDTO indexData)
+        public async Task<ActionResult<PagedData<MenuItemDTO>>> GetMenuItems([FromQuery] IndexingDTO indexData)
         {
-            if (indexData.SortBy != null && !typeof(MenuItem).FieldExists(indexData.SortBy))
+            if (indexData.SortBy != null && !typeof(MenuItemDTO).FieldExists(indexData.SortBy))
             {
-                ModelState.AddModelError(nameof(indexData.SortBy), "Can't find the provided sort property.");
+                ModelState.AddModelError(nameof(indexData.SortBy), $"Can't find the provided sort property: '{indexData.SortBy}'");
                 return ValidationProblem();
             }
 
-            var query = _menuItemService.PrepareIndexQuery(_menuItemRepository.GetAll(), indexData);
-
-            var page = await _paginationService.Paginate(query, indexData);
+            var page = await _menuItemService.Get(indexData);
 
             return Ok(page);
         }
@@ -47,16 +41,17 @@ namespace Restaurant_Orders.Controllers
         [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<MenuItem>> GetMenuItem(long id)
+        public async Task<ActionResult<MenuItemDTO>> GetMenuItem(long id)
         {
-            var menuItem = await _menuItemRepository.GetById(id);
-
-            if (menuItem == null)
+            try
+            {
+                var menuItem = await _menuItemService.GetById(id);
+                return Ok(menuItem);
+            }
+            catch (MenuItemDoesNotExists)
             {
                 return NotFound();
             }
-
-            return menuItem;
         }
 
         [HttpPut("{id:long}")]
@@ -66,26 +61,25 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<MenuItem>> UpdateMenuItem(long id, MenuItemDTO menuItemDto)
+        public async Task<ActionResult<MenuItemDTO>> UpdateMenuItem(long id, MenuItemUpdateDTO menuItemDto)
         {
-            if (!(await _menuItemRepository.MenuItemExists(id)))
+            try
+            {
+                MenuItemDTO menuItem = await _menuItemService.Update(new MenuItemDTO
+                {
+                    Id = id,
+                    Name = menuItemDto.Name,
+                    Description = menuItemDto.Description,
+                    Price = menuItemDto.Price
+                });
+
+                return Ok(menuItem);
+            }
+            catch (Exception ex) when (ex is MenuItemDoesNotExists ||
+                                       ex is DbUpdateConcurrencyException)
             {
                 return NotFound();
             }
-
-            var menuItem = new MenuItem
-            {
-                Id = id,
-                Name = menuItemDto.Name,
-                Description = menuItemDto.Description,
-                Price = menuItemDto.Price
-            };
-
-            _menuItemRepository.UpdateMenuItem(menuItem);
-
-            await _menuItemRepository.Commit();
-
-            return Ok(menuItem);
         }
 
         [HttpPost]
@@ -94,17 +88,16 @@ namespace Restaurant_Orders.Controllers
         [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status201Created)]
-        public async Task<ActionResult<MenuItem>> CreateMenuItem(MenuItemDTO menuItemDto)
+        public async Task<ActionResult<MenuItemDTO>> CreateMenuItem(MenuItemUpdateDTO menuItemDto)
         {
-            var menuItem = new MenuItem
+            var menuItem = new MenuItemDTO
             {
                 Name = menuItemDto.Name,
                 Description = menuItemDto.Description,
                 Price = menuItemDto.Price
             };
 
-            _menuItemRepository.Add(menuItem);
-            await _menuItemRepository.Commit();
+            menuItem = await _menuItemService.Create(menuItem);
 
             return CreatedAtAction(nameof(GetMenuItem), new { id = menuItem.Id }, menuItem);
         }
@@ -116,16 +109,17 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         public async Task<IActionResult> DeleteMenuItem(long id)
         {
-            var menuItem = await _menuItemRepository.GetById(id);
-            if (menuItem == null)
+            try
+            {
+                await _menuItemService.Delete(id);
+
+                return NoContent();
+            }
+            catch (Exception ex) when (ex is MenuItemDoesNotExists ||
+                                       ex is DbUpdateConcurrencyException)
             {
                 return NotFound();
             }
-
-            _menuItemRepository.Delete(menuItem);
-            await _menuItemRepository.Commit();
-
-            return NoContent();
         }
     }
 }

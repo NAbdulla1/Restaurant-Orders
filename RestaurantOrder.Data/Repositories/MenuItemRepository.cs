@@ -1,14 +1,16 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RestaurantOrder.Data.Models;
+using RestaurantOrder.Data.Models.DTOs;
+using RestaurantOrder.Data.Services;
 
 namespace RestaurantOrder.Data.Repositories
 {
     public interface IMenuItemRepository
     {
-        void Add(MenuItem item);
-        Task Commit();
+        MenuItem Add(MenuItem item);
+        Task<int> Commit();
         void Delete(MenuItem menuItem);
-        IQueryable<MenuItem> GetAll();
+        Task<QueryResult<MenuItem>> GetAll(QueryDetailsDTO<MenuItem> queryDetails);
         Task<MenuItem?> GetById(long id);
         Task<IEnumerable<MenuItem>> GetByIds(List<long> ids);
         Task<bool> MenuItemExists(long id);
@@ -18,25 +20,39 @@ namespace RestaurantOrder.Data.Repositories
     public class MenuItemRepository : IMenuItemRepository
     {
         private readonly RestaurantContext _dbContext;
+        private readonly IPaginationService<MenuItem> _paginationService;
 
-        public MenuItemRepository(RestaurantContext dbContext)
+        public MenuItemRepository(RestaurantContext dbContext, IPaginationService<MenuItem> paginationService)
         {
             _dbContext = dbContext;
+            _paginationService = paginationService;
         }
 
-        public IQueryable<MenuItem> GetAll()
+        public async Task<QueryResult<MenuItem>> GetAll(QueryDetailsDTO<MenuItem> queryDetails)
         {
-            return _dbContext.MenuItems.Where(item => true);
+            var query = _dbContext.MenuItems.AsQueryable();
+            foreach (var whereQuery in queryDetails.WhereQueries)
+            {
+                query = query.Where(whereQuery);
+            }
+
+            if (queryDetails.OrderingExpr != null)
+            {
+                query = queryDetails.SortOrder == "asc" ? query.OrderBy(queryDetails.OrderingExpr) : query.OrderByDescending(queryDetails.OrderingExpr);
+            }
+
+            return await _paginationService.Paginate(query, queryDetails.Page, queryDetails.PageSize);
         }
 
-        public void Add(MenuItem item)
+        public MenuItem Add(MenuItem item)
         {
             _dbContext.MenuItems.Add(item);
+            return item;
         }
 
-        public async Task Commit()
+        public async Task<int> Commit()
         {
-            await _dbContext.SaveChangesAsync();
+            return await _dbContext.SaveChangesAsync();
         }
 
         public void Delete(MenuItem menuItem)

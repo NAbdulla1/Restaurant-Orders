@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Restaurant_Orders.Models.DTOs
+namespace RestaurantOrder.Core.DTOs
 {
-    public class MenuItemDTO
+    public class MenuItemUpdateDTO
     {
         [Required]
         [MaxLength(255)]
