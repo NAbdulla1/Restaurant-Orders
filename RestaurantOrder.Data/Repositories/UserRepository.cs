@@ -5,8 +5,8 @@ namespace RestaurantOrder.Data.Repositories
 {
     public interface IUserRepository
     {
-        void Add(User user);
-        Task Commit();
+        User Add(User user);
+        Task<int> Commit();
         Task<IEnumerable<User>> GetAll();
         Task<User?> GetByEmail(string email);
         Task<User?> GetById(long id);
@@ -37,14 +37,15 @@ namespace RestaurantOrder.Data.Repositories
             return await _dbContext.Users.FirstOrDefaultAsync(user => user.Email == email);
         }
 
-        public void Add(User user)
+        public User Add(User user)
         {
             _dbContext.Users.Add(user);
+            return user;
         }
 
-        public async Task Commit()
+        public async Task<int> Commit()
         {
-            await _dbContext.SaveChangesAsync();
+            return await _dbContext.SaveChangesAsync();
         }
 
         public async Task<bool> HasAnyAdmin()
