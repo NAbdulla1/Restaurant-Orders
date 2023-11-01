@@ -1,4 +1,4 @@
-﻿namespace Restaurant_Orders.Models.DTOs
+﻿namespace RestaurantOrder.Core.DTOs
 {
     public class AccessTokenDTO
     {

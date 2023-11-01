@@ -1,6 +1,7 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using Restaurant_Orders.Extensions;
-using Restaurant_Orders.Models.Config;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using RestaurantOrder.Core.DTOs;
+using RestaurantOrder.Core.Extensions;
 using RestaurantOrder.Data.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -20,7 +21,13 @@ namespace Restaurant_Orders.Services
 
         public JsonWebTokenService(IConfiguration configuration)
         {
-            _jwtInfo = configuration.GetRequiredSection(JWTConfigData.ConfigSectionName).Get<JWTConfigData>();
+            var jwtConfig = configuration.GetRequiredSection(JWTConfigData.ConfigSectionName).Get<JWTConfigData>();
+            if (jwtConfig == null)
+            {
+                throw new NullReferenceException($"Can't read '{JWTConfigData.ConfigSectionName}' section from configurations.");
+            }
+
+            _jwtInfo = jwtConfig;
         }
 
         public string CreateToken(User user)

@@ -1,4 +1,4 @@
-﻿namespace Restaurant_Orders.Exceptions
+﻿namespace RestaurantOrder.Core.Exceptions
 {
     public class UnauthenticatedException : Exception
     {

@@ -1,5 +1,5 @@
-﻿using Restaurant_Orders.Models.Config;
-using Restaurant_Orders.Services;
+﻿using Restaurant_Orders.Services;
+using RestaurantOrder.Core.DTOs;
 using RestaurantOrder.Data.Models;
 using RestaurantOrder.Data.Repositories;
 

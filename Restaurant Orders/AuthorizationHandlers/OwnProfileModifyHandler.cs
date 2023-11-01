@@ -30,7 +30,7 @@ namespace Restaurant_Orders.Authorizations
                 return Task.CompletedTask;
             }
 
-            var userData = _userService.GetCurrentUser(httpContext);
+            var userData = _userService.GetCurrentAuthenticatedUser(httpContext);
             var idPathParamValue = httpContext.Request.RouteValues["id"] as string;
             if (idPathParamValue == null)
             {

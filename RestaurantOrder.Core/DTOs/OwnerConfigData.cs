@@ -1,6 +1,6 @@
 ﻿using RestaurantOrder.Data.Models;
 
-namespace Restaurant_Orders.Models.Config
+namespace RestaurantOrder.Core.DTOs
 {
     public class OwnerConfigData : User
     {

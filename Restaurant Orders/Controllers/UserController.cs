@@ -1,12 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Restaurant_Orders.Authorizations;
-using Restaurant_Orders.Exceptions;
-using Restaurant_Orders.Extensions;
-using Restaurant_Orders.Models.DTOs;
 using Restaurant_Orders.Services;
-using RestaurantOrder.Data.Models;
-using RestaurantOrder.Data.Repositories;
+using RestaurantOrder.Core.DTOs;
+using RestaurantOrder.Core.Exceptions;
 using System.Net.Mime;
 
 namespace Restaurant_Orders.Controllers
@@ -15,21 +12,11 @@ namespace Restaurant_Orders.Controllers
     [Route("api/user")]
     public class UserController : Controller
     {
-        private readonly IUserRepository _userRepository;
         private readonly IUserService _userService;
 
-        public UserController(IUserRepository userRepository, IUserService userService)
+        public UserController(IUserService userService)
         {
-            _userRepository = userRepository;
             _userService = userService;
-        }
-
-        [HttpGet]
-        [Authorize(Roles = "RestaurantOwner")]
-        [Produces(MediaTypeNames.Application.Json)]
-        public async Task<ActionResult<IAsyncEnumerable<UserDTO>>> GetUsers()
-        {
-            return Ok((await _userRepository.GetAll()).Select(user => user.ToUserDTO()));
         }
 
         [HttpGet("{id:long}")]
@@ -39,14 +26,17 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<ActionResult<UserDTO>> GetUser(long id) {
-            var user = await _userRepository.GetById(id);
-            if(user == null)
+        public async Task<ActionResult<UserDTO>> GetUser(long id)
+        {
+            try
+            {
+                var user = await _userService.GetUser(id);
+                return Ok(user);
+            }
+            catch (UserNotFoundException)
             {
                 return NotFound();
             }
-
-            return Ok(user.ToUserDTO());
         }
 
         [HttpPut("{id:long}")]
@@ -57,19 +47,17 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        public async Task<ActionResult<UserDTO>> UpdateUser(long id, UserUpdateDTO userUpdate)
+        public async Task<ActionResult<UserDTO>> UpdateUser(long id, UserUpdateDTO userUpdateDTO)
         {
-            var user = await _userRepository.GetById(id);
-            if (user == null)
+            try
+            {
+                var user = await _userService.UpdateUser(id, userUpdateDTO);
+                return Ok(user);
+            }
+            catch(UserNotFoundException)
             {
                 return NotFound();
             }
-
-            _userService.PrepareUserUpdate(user, userUpdate);
-
-            await _userRepository.Commit();
-
-            return Ok(user.ToUserDTO());
         }
 
         [HttpPost("register")]
@@ -77,21 +65,19 @@ namespace Restaurant_Orders.Controllers
         [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<UserDTO>> RegisterUser([Bind("FirstName,LastName,Email,Password")] User customer)
+        public async Task<ActionResult<UserDTO>> RegisterCustomer(CustomerRegisterDTO customer)
         {
-            var existingUser = _userRepository.GetByEmail(customer.Email);
-            if(existingUser != null)
+            try
             {
-                ModelState.AddModelError(nameof(customer.Email), $"Another user exists with the given email: '{customer.Email}'.");
+                var newCustomer = await _userService.CreateCustomer(customer);
+
+                return CreatedAtAction(nameof(GetUser), new { id = newCustomer.Id }, newCustomer);
+            }
+            catch (CustomerAlreadyExistsException ex)
+            {
+                ModelState.AddModelError(nameof(customer.Email), ex.Message);
                 return ValidationProblem();
             }
-
-            customer = _userService.PrepareCustomer(customer);
-
-            _userRepository.Add(customer);
-            await _userRepository.Commit();
-
-            return CreatedAtAction(nameof(GetUser), new { id = customer.Id }, customer.ToUserDTO());
         }
 
         [HttpPost("login")]
@@ -102,17 +88,10 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<AccessTokenDTO>> LoginUser(LoginPayloadDTO loginPayload)
         {
-            var savedUser = await _userRepository.GetByEmail(loginPayload.Email);
-
-            if (savedUser == null)
-            {
-                return Unauthorized();
-            }
-
             try
             {
-                var token = _userService.SignInUser(savedUser, loginPayload.Password);
-                return Ok(new AccessTokenDTO { AccessToken = token });
+                var accessToken = await _userService.SignInUser(loginPayload);
+                return Ok(accessToken);
             }
             catch (UnauthenticatedException)
             {

@@ -1,4 +1,4 @@
-﻿namespace Restaurant_Orders.Models.Config
+﻿namespace RestaurantOrder.Core.DTOs
 {
     public class JWTConfigData
     {

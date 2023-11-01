@@ -6,7 +6,7 @@ using Restaurant_Orders.Data;
 using Restaurant_Orders.Extensions;
 using Restaurant_Orders.Filters;
 using Restaurant_Orders.Infrastructure;
-using Restaurant_Orders.Models.Config;
+using RestaurantOrder.Core.DTOs;
 using RestaurantOrder.Data;
 using System.Text;
 using System.Text.Json.Serialization;

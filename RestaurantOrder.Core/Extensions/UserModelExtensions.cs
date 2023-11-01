@@ -1,9 +1,9 @@
-﻿using RestaurantOrder.Data.Models;
-using Restaurant_Orders.Models.DTOs;
+﻿using RestaurantOrder.Core.DTOs;
+using RestaurantOrder.Data.Models;
 
-namespace Restaurant_Orders.Extensions
+namespace RestaurantOrder.Core.Extensions
 {
-    public static class UserEntityExtensions
+    public static class UserModelExtensions
     {
         public static UserDTO ToUserDTO(this User user)
         {
@@ -12,7 +12,8 @@ namespace Restaurant_Orders.Extensions
                 Id = user.Id,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Email = user.Email
+                Email = user.Email,
+                UserType = user.UserType.ToString(),
             };
         }
     }
