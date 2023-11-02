@@ -12,7 +12,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RestaurantOrder.Data", "RestaurantOrder.Data\RestaurantOrder.Data.csproj", "{43EBC216-58CE-4FD0-84D7-FFC2ECBD2972}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestaurantOrder.Core", "RestaurantOrder.Core\RestaurantOrder.Core.csproj", "{14B69064-B67E-4FBA-AD55-972F851BBE5C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RestaurantOrder.Core", "RestaurantOrder.Core\RestaurantOrder.Core.csproj", "{14B69064-B67E-4FBA-AD55-972F851BBE5C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestaurantOrder.All.Tests", "RestaurantOrder.All.Tests\RestaurantOrder.All.Tests.csproj", "{441AC5F7-429E-4047-90DD-D2F0892EE21F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -32,6 +34,10 @@ Global
 		{14B69064-B67E-4FBA-AD55-972F851BBE5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{14B69064-B67E-4FBA-AD55-972F851BBE5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{14B69064-B67E-4FBA-AD55-972F851BBE5C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{441AC5F7-429E-4047-90DD-D2F0892EE21F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{441AC5F7-429E-4047-90DD-D2F0892EE21F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{441AC5F7-429E-4047-90DD-D2F0892EE21F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{441AC5F7-429E-4047-90DD-D2F0892EE21F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
