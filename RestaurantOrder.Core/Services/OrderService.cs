@@ -120,7 +120,7 @@ namespace Restaurant_Orders.Services
         public async Task<OrderDTO> UpdateOrderItems(OrderDTO orderDTO, OrderUpdateDTO orderData)
         {
             var order = orderDTO.ToOrder();
-            var deleteExistingOrderItems = UpdateOrRemoveExistingOrderItems(orderData.RemoveMenuItemIds, order);
+            var deleteExistingOrderItems = await UpdateOrRemoveExistingOrderItems(orderData.RemoveMenuItemIds, order);
 
             var newOrderItems = await AddNewOrderItems(orderData.AddMenuItemIds, order);
 
@@ -192,11 +192,12 @@ namespace Restaurant_Orders.Services
             return addAsNew;
         }
 
-        private List<OrderItem> UpdateOrRemoveExistingOrderItems(ICollection<long> removeMenuItemIds, Order order)
+        private async Task<List<OrderItem>> UpdateOrRemoveExistingOrderItems(ICollection<long> removeMenuItemIds, Order order)
         {
             var removeItemsCountById = GetItemsCountById(removeMenuItemIds);
 
             var deleteExistingOrderItems = new List<OrderItem>();
+            var updatedOrderItems = new List<OrderItem>();
             foreach (var orderItem in order.OrderItems)
             {
                 var menuItemId = orderItem.MenuItemId.GetValueOrDefault();
@@ -214,6 +215,19 @@ namespace Restaurant_Orders.Services
                 {
                     orderItem.Quantity -= quantityToReduce;
                     _orderItemRepository.Update(orderItem);
+                    updatedOrderItems.Add(orderItem);
+                }
+            }
+
+            var menuItems = await _menuItemRepository.GetByIds(updatedOrderItems.Select(oi => oi.MenuItemId.GetValueOrDefault()).ToList());
+            foreach (var menuItem in menuItems)
+            {
+                var orderItem = updatedOrderItems.FirstOrDefault(oi => oi.MenuItemId == menuItem.Id);
+                if(orderItem != null)
+                {
+                    orderItem.MenuItemPrice = menuItem.Price;
+                    orderItem.MenuItemName = menuItem.Name;
+                    orderItem.MenuItemDescription = menuItem.Description;
                 }
             }
 
