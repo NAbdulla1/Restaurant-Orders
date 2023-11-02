@@ -82,10 +82,7 @@ namespace Restaurant_Orders.Services
                 queryDetails.WhereQueries.Add(GetSearchQuery(indexData.SearchBy));
             }
 
-            if (indexData.SortBy != null)
-            {
-                AddSortQuery(queryDetails, indexData.SortBy, indexData.SortOrder);
-            }
+            AddSortQuery(queryDetails, indexData.SortBy, indexData.SortOrder);
 
             var pageData = await _menuItemRepository.GetAll(queryDetails);
 
@@ -107,11 +104,16 @@ namespace Restaurant_Orders.Services
                         );
         }
 
-        private static void AddSortQuery(QueryDetailsDTO<MenuItem> queryDetails, string sortColumn, string? sortDirection)
+        private static void AddSortQuery(QueryDetailsDTO<MenuItem> queryDetails, string? sortColumn, string? sortDirection)
         {
             if(sortDirection == null)
             {
                 sortDirection = "asc";
+            }
+
+            if (sortColumn == null)
+            {
+                sortColumn = "id";
             }
 
             queryDetails.SortOrder = sortDirection;

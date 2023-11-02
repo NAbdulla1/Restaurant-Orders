@@ -57,10 +57,7 @@ namespace Restaurant_Orders.Services
                 AddOrderStatusQuery(queryDetails, orderFilters.Status);
             }
 
-            if (indexData.SortBy != null)
-            {
-                AddSortQuery(queryDetails, indexData.SortBy, indexData.SortOrder);
-            }
+            AddSortQuery(queryDetails, indexData.SortBy, indexData.SortOrder);
 
             var result = await _orderRepository.GetAll(queryDetails);
 
@@ -295,11 +292,16 @@ namespace Restaurant_Orders.Services
             queryDetails.WhereQueries.Add(order => order.Status == status);
         }
 
-        private static void AddSortQuery(QueryDetailsDTO<Order> queryDetails, string sortColumn, string? sortDirection)
+        private static void AddSortQuery(QueryDetailsDTO<Order> queryDetails, string? sortColumn, string? sortDirection)
         {
             if (sortDirection == null)
             {
                 sortDirection = "asc";
+            }
+
+            if(sortColumn == null)
+            {
+                sortColumn = "id";
             }
 
             queryDetails.SortOrder = sortDirection;
