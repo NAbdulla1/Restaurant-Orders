@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Restaurant_Orders.Services;
+using RestaurantOrder.Core.Services;
 using RestaurantOrder.Data.Extensions;
 
 namespace RestaurantOrder.Core.Extensions
@@ -13,6 +14,7 @@ namespace RestaurantOrder.Core.Extensions
                 .AddScoped<ITokenService, JsonWebTokenService>()
                 .AddScoped<IUserService, UserService>()
                 .AddScoped<IMenuItemService, MenuItemService>()
+                .AddScoped<IOrderItemService, OrderItemService>()
                 .AddScoped<IOrderService, OrderService>();
         }
     }

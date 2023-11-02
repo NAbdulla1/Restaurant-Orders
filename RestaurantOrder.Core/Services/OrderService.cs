@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using RestaurantOrder.Core.DTOs;
 using RestaurantOrder.Core.Exceptions;
 using RestaurantOrder.Core.Extensions;
+using RestaurantOrder.Core.Services;
 using RestaurantOrder.Data.Models;
 using RestaurantOrder.Data.Models.DTOs;
 using RestaurantOrder.Data.Repositories;
@@ -26,16 +27,16 @@ namespace Restaurant_Orders.Services
     public class OrderService : IOrderService
     {
         private readonly IOrderRepository _orderRepository;
-        private readonly IMenuItemRepository _menuItemRepository;
         private readonly IOrderItemRepository _orderItemRepository;
         private readonly int _defaultPageSize;
+        private readonly IOrderItemService _orderItemService;
 
-        public OrderService(IOrderRepository orderRepository, IMenuItemRepository menuItemRepository, IOrderItemRepository orderItemRepository, IConfiguration configuration)
+        public OrderService(IOrderRepository orderRepository, IOrderItemRepository orderItemRepository, IConfiguration configuration, IOrderItemService orderItemService)
         {
             _orderRepository = orderRepository;
-            _menuItemRepository = menuItemRepository;
             _orderItemRepository = orderItemRepository;
             _defaultPageSize = configuration.GetValue<int>("DefaultPageSize");
+            _orderItemService = orderItemService;
         }
 
         public async Task<PagedData<OrderDTO>> Get(IndexingDTO indexData, OrderFilterDTO orderFilters)
@@ -117,9 +118,9 @@ namespace Restaurant_Orders.Services
         public async Task<OrderDTO> UpdateOrderItems(OrderDTO orderDTO, OrderUpdateDTO orderData)
         {
             var order = orderDTO.ToOrder();
-            var deleteExistingOrderItems = await UpdateOrRemoveExistingOrderItems(orderData.RemoveMenuItemIds, order);
+            var deleteExistingOrderItems = await _orderItemService.UpdateOrRemoveExistingOrderItems(GetItemsCountById(orderData.RemoveMenuItemIds), order);
 
-            var newOrderItems = await AddNewOrderItems(orderData.AddMenuItemIds, order);
+            var newOrderItems = await _orderItemService.AddNewOrUpdateExistingOrderItems(GetItemsCountById(orderData.AddMenuItemIds), order);
 
             order.OrderItems = order.OrderItems
                 .Except(deleteExistingOrderItems)
@@ -139,9 +140,9 @@ namespace Restaurant_Orders.Services
         {
             Dictionary<long, int> itemCountById = GetItemsCountById(menuItemIds);
 
-            var menuItems = await CheckAndGetMenuItems(itemCountById);
+            var menuItems = await _orderItemService.CheckAndGetMenuItems(itemCountById);
 
-            var orderItems = BuildOrderItems(menuItems, itemCountById);
+            var orderItems = _orderItemService.BuildOrderItems(menuItems, itemCountById);
 
             decimal orderTotal = CalculateOrderTotal(orderItems);
 
@@ -159,114 +160,11 @@ namespace Restaurant_Orders.Services
             return order.ToOrderDTO();
         }
 
-        private async Task<IEnumerable<OrderItem>> AddNewOrderItems(ICollection<long> addMenuItemIds, Order order)
-        {
-            Dictionary<long, int> itemCountById = GetItemsCountById(addMenuItemIds);
-
-            var menuItems = await CheckAndGetMenuItems(itemCountById);
-
-            var orderItems = BuildOrderItems(menuItems, itemCountById);
-
-            var addAsNew = new List<OrderItem>();
-            foreach (var orderItem in orderItems)
-            {
-                var existingOrderItem = order.OrderItems.Where(oi => oi.MenuItemId == orderItem.MenuItemId).FirstOrDefault();
-                if (existingOrderItem != null)
-                {
-                    existingOrderItem.Quantity += orderItem.Quantity;
-                    existingOrderItem.MenuItemName = orderItem.MenuItemName;
-                    existingOrderItem.MenuItemPrice = orderItem.MenuItemPrice;
-                    existingOrderItem.MenuItemDescription = orderItem.MenuItemDescription;
-                    _orderItemRepository.Update(existingOrderItem);
-                }
-                else
-                {
-                    var newOrderItem = _orderItemRepository.Add(orderItem);
-                    addAsNew.Add(newOrderItem);
-                }
-            }
-
-            return addAsNew;
-        }
-
-        private async Task<List<OrderItem>> UpdateOrRemoveExistingOrderItems(ICollection<long> removeMenuItemIds, Order order)
-        {
-            var removeItemsCountById = GetItemsCountById(removeMenuItemIds);
-
-            var deleteExistingOrderItems = new List<OrderItem>();
-            var updatedOrderItems = new List<OrderItem>();
-            foreach (var orderItem in order.OrderItems)
-            {
-                var menuItemId = orderItem.MenuItemId.GetValueOrDefault();
-                if (menuItemId == 0 || !removeItemsCountById.ContainsKey(menuItemId))
-                {
-                    continue;
-                }
-
-                var quantityToReduce = removeItemsCountById[menuItemId];
-                if (quantityToReduce >= orderItem.Quantity)
-                {
-                    deleteExistingOrderItems.Add(orderItem);
-                }
-                else
-                {
-                    orderItem.Quantity -= quantityToReduce;
-                    _orderItemRepository.Update(orderItem);
-                    updatedOrderItems.Add(orderItem);
-                }
-            }
-
-            var menuItems = await _menuItemRepository.GetByIds(updatedOrderItems.Select(oi => oi.MenuItemId.GetValueOrDefault()).ToList());
-            foreach (var menuItem in menuItems)
-            {
-                var orderItem = updatedOrderItems.FirstOrDefault(oi => oi.MenuItemId == menuItem.Id);
-                if(orderItem != null)
-                {
-                    orderItem.MenuItemPrice = menuItem.Price;
-                    orderItem.MenuItemName = menuItem.Name;
-                    orderItem.MenuItemDescription = menuItem.Description;
-                }
-            }
-
-            _orderItemRepository.DeleteMany(deleteExistingOrderItems);
-
-            return deleteExistingOrderItems;
-        }
-
         public Dictionary<long, int> GetItemsCountById(ICollection<long> itemIds)
         {
             return itemIds
                 .GroupBy(id => id)
                 .ToDictionary(g => g.Key, g => g.Count());
-        }
-
-        private async Task<IEnumerable<MenuItem>> CheckAndGetMenuItems(Dictionary<long, int> itemCountById)
-        {
-            var menuItems = await _menuItemRepository.GetByIds(itemCountById.Select(item => item.Key).ToList());
-
-            var absentIds = itemCountById.Select(entry => entry.Key).Except(menuItems.Select(menuItem => menuItem.Id));
-            if (absentIds.Any())
-            {
-                throw new MenuItemNotFountException($"The following Menu Items do not exist: [{string.Join(", ", absentIds)}]");
-            }
-
-            return menuItems;
-        }
-
-        private static List<OrderItem> BuildOrderItems(IEnumerable<MenuItem> menuItems, Dictionary<long, int> itemCountById)
-        {
-            var orderItems = menuItems
-                .Select(menuItemAndQuantity => new OrderItem
-                {
-                    MenuItemId = menuItemAndQuantity.Id,
-                    MenuItemName = menuItemAndQuantity.Name,
-                    MenuItemDescription = menuItemAndQuantity.Description,
-                    MenuItemPrice = menuItemAndQuantity.Price,
-                    Quantity = itemCountById[menuItemAndQuantity.Id]
-                })
-                .ToList();
-
-            return orderItems;
         }
 
         private static decimal CalculateOrderTotal(ICollection<OrderItem> orderItems)
@@ -294,15 +192,8 @@ namespace Restaurant_Orders.Services
 
         private static void AddSortQuery(QueryDetailsDTO<Order> queryDetails, string? sortColumn, string? sortDirection)
         {
-            if (sortDirection == null)
-            {
-                sortDirection = "asc";
-            }
-
-            if(sortColumn == null)
-            {
-                sortColumn = "id";
-            }
+            sortDirection ??= "asc";
+            sortColumn ??= "id";
 
             queryDetails.SortOrder = sortDirection;
             queryDetails.OrderingExpr = GetOrderExpression(sortColumn);

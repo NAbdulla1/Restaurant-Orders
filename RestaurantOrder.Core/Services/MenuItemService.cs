@@ -106,15 +106,8 @@ namespace Restaurant_Orders.Services
 
         private static void AddSortQuery(QueryDetailsDTO<MenuItem> queryDetails, string? sortColumn, string? sortDirection)
         {
-            if(sortDirection == null)
-            {
-                sortDirection = "asc";
-            }
-
-            if (sortColumn == null)
-            {
-                sortColumn = "id";
-            }
+            sortDirection ??= "asc";
+            sortColumn ??= "id";
 
             queryDetails.SortOrder = sortDirection;
             queryDetails.OrderingExpr = GetOrderExpression(sortColumn);
