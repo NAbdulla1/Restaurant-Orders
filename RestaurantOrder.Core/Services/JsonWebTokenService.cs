@@ -24,7 +24,7 @@ namespace Restaurant_Orders.Services
             var jwtConfig = configuration.GetRequiredSection(JWTConfigData.ConfigSectionName).Get<JWTConfigData>();
             if (jwtConfig == null)
             {
-                throw new NullReferenceException($"Can't read '{JWTConfigData.ConfigSectionName}' section from configurations.");
+                throw new InvalidOperationException($"Can't read '{JWTConfigData.ConfigSectionName}' section from configurations.");
             }
 
             _jwtInfo = jwtConfig;
