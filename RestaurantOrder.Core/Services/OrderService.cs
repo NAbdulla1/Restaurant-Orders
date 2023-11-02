@@ -17,7 +17,6 @@ namespace Restaurant_Orders.Services
         Task Delete(long id, Guid version);
         Task<PagedData<OrderDTO>> Get(IndexingDTO indexData, OrderFilterDTO orderFilterData);
         Task<OrderDTO?> GetById(long id, long? userId = null);
-        Dictionary<long, int> GetItemsCountById(ICollection<long> itemIds);
         Task<bool> IsOrderExists(long id);
         Task<OrderDTO> UpdateOrderItems(OrderDTO order, OrderUpdateDTO orderData);
         Task<OrderDTO> UpdateStatus(long id, OrderStatus newStatus, Guid version);
@@ -118,9 +117,9 @@ namespace Restaurant_Orders.Services
         public async Task<OrderDTO> UpdateOrderItems(OrderDTO orderDTO, OrderUpdateDTO orderData)
         {
             var order = orderDTO.ToOrder();
-            var deleteExistingOrderItems = await _orderItemService.UpdateOrRemoveExistingOrderItems(GetItemsCountById(orderData.RemoveMenuItemIds), order);
+            var deleteExistingOrderItems = await _orderItemService.UpdateOrRemoveExistingOrderItems(orderData.RemoveMenuItemIds.CountFrequency(), order);
 
-            var newOrderItems = await _orderItemService.AddNewOrUpdateExistingOrderItems(GetItemsCountById(orderData.AddMenuItemIds), order);
+            var newOrderItems = await _orderItemService.AddNewOrUpdateExistingOrderItems(orderData.AddMenuItemIds.CountFrequency(), order);
 
             order.OrderItems = order.OrderItems
                 .Except(deleteExistingOrderItems)
@@ -138,7 +137,7 @@ namespace Restaurant_Orders.Services
 
         public async Task<OrderDTO> Create(ICollection<long> menuItemIds, long customerId)
         {
-            Dictionary<long, int> itemCountById = GetItemsCountById(menuItemIds);
+            var itemCountById = menuItemIds.CountFrequency();
 
             var menuItems = await _orderItemService.CheckAndGetMenuItems(itemCountById);
 
@@ -158,13 +157,6 @@ namespace Restaurant_Orders.Services
             await _orderRepository.Commit();
 
             return order.ToOrderDTO();
-        }
-
-        public Dictionary<long, int> GetItemsCountById(ICollection<long> itemIds)
-        {
-            return itemIds
-                .GroupBy(id => id)
-                .ToDictionary(g => g.Key, g => g.Count());
         }
 
         private static decimal CalculateOrderTotal(ICollection<OrderItem> orderItems)

@@ -1,4 +1,5 @@
 ﻿using RestaurantOrder.Core.DTOs;
+using RestaurantOrder.Core.Extensions;
 using System.ComponentModel.DataAnnotations;
 
 namespace RestaurantOrder.Core.Validations
@@ -24,9 +25,7 @@ namespace RestaurantOrder.Core.Validations
             var addMenuItemIds = orderUpdateDTO.AddMenuItemIds;
             var removeMenuItemIds = orderUpdateDTO.RemoveMenuItemIds;
 
-            var addIdsDict = addMenuItemIds
-                .GroupBy(id => id)
-                .ToDictionary(g => g.Key, g => g.Count());
+            var addIdsDict = addMenuItemIds.CountFrequency();
 
             foreach (var remMenuItemId in removeMenuItemIds)
             {
