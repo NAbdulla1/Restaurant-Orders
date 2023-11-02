@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace RestaurantOrder.Core.Validations
 {
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
     public class ExclusiveMenuItemsAttribute : ValidationAttribute
     {
         protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
@@ -22,11 +23,6 @@ namespace RestaurantOrder.Core.Validations
 
             var addMenuItemIds = orderUpdateDTO.AddMenuItemIds;
             var removeMenuItemIds = orderUpdateDTO.RemoveMenuItemIds;
-
-            if (!addMenuItemIds.Any() && !removeMenuItemIds.Any())
-            {
-                return new ValidationResult($"Either of {nameof(orderUpdateDTO.AddMenuItemIds)} or {nameof(orderUpdateDTO.RemoveMenuItemIds)} field is required.", new List<string> { propertyName });
-            }
 
             var addIdsDict = addMenuItemIds
                 .GroupBy(id => id)

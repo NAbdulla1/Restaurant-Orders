@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace RestaurantOrder.Core.DTOs
 {
+    [NotEmptyMenuItems]
     public class OrderUpdateDTO : VersionDTO
     {
         [Required]
