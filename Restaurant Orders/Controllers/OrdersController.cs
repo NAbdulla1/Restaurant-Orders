@@ -137,13 +137,6 @@ namespace Restaurant_Orders.Controllers
                 return Problem(title: "Not allowed to update other users order.", statusCode: 403);
             }
 
-            bool validationProblem = ValidateUpdateOrderData(orderData);
-
-            if (validationProblem)
-            {
-                return ValidationProblem();
-            }
-
             if (order.Status != OrderStatus.CREATED.ToString() && order.Status != OrderStatus.PROCESSING.ToString())
             {
                 ModelState.AddModelError(string.Empty, $"Unable to modify order because the order is not in '{OrderStatus.CREATED}' or '{OrderStatus.PROCESSING}' state.");
@@ -165,26 +158,6 @@ namespace Restaurant_Orders.Controllers
             {
                 return await ConcurrentErrorResponse(id);
             }
-        }
-
-        private bool ValidateUpdateOrderData(OrderUpdateDTO orderData)
-        {
-            var validationProblem = false;
-            if (!orderData.AddMenuItemIds.Any() && !orderData.RemoveMenuItemIds.Any())
-            {
-                ModelState.AddModelError(nameof(orderData.AddMenuItemIds), $"Either of {nameof(orderData.AddMenuItemIds)} or {nameof(orderData.RemoveMenuItemIds)} field is required.");
-                ModelState.AddModelError(nameof(orderData.RemoveMenuItemIds), $"Either of {nameof(orderData.RemoveMenuItemIds)} or {nameof(orderData.AddMenuItemIds)} field is required.");
-                validationProblem = true;
-            }
-
-            var itemCountForAddMenuItems = _orderService.GetItemsCountById(orderData.AddMenuItemIds);
-            if (orderData.RemoveMenuItemIds.Any(remItemId => itemCountForAddMenuItems.ContainsKey(remItemId)))
-            {
-                ModelState.AddModelError(string.Empty, "It is not possible to add and remove the same menu item at the same time.");
-                validationProblem = true;
-            }
-
-            return validationProblem;
         }
 
         [HttpPost]
