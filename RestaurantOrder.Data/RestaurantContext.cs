@@ -61,6 +61,7 @@ namespace RestaurantOrder.Data
                 .HasMany(menuItem => menuItem.OrderItems)
                 .WithOne(orderItem => orderItem.MenuItem)
                 .HasForeignKey(orderItem => orderItem.MenuItemId)
+                .OnDelete(DeleteBehavior.SetNull)
                 .IsRequired(false);
         }
 
