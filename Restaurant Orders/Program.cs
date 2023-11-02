@@ -2,10 +2,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Restaurant_Orders.Authorizations;
-using Restaurant_Orders.Data;
 using Restaurant_Orders.Extensions;
 using Restaurant_Orders.Filters;
 using Restaurant_Orders.Infrastructure;
+using RestaurantOrder.Core.Data;
 using RestaurantOrder.Core.DTOs;
 using RestaurantOrder.Data;
 using System.Text;
@@ -61,7 +61,12 @@ builder.Services.AddSwaggerGen(options => options.ConfigureSwaggerAuth());
 
 var app = builder.Build();
 
-await SeedData.SeedAdmin(app);
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var ownerInfo = app.Configuration.GetRequiredSection(OwnerConfigData.ConfigSectionName).Get<OwnerConfigData>();
+    await DataSeeder.SeedAdmin(services, ownerInfo);
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
