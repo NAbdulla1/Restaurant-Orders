@@ -48,7 +48,7 @@ namespace Restaurant_Orders.Controllers
                 var menuItem = await _menuItemService.GetById(id);
                 return Ok(menuItem);
             }
-            catch (MenuItemDoesNotExists)
+            catch (MenuItemNotFountException)
             {
                 return NotFound();
             }
@@ -75,7 +75,7 @@ namespace Restaurant_Orders.Controllers
 
                 return Ok(menuItem);
             }
-            catch (Exception ex) when (ex is MenuItemDoesNotExists ||
+            catch (Exception ex) when (ex is MenuItemNotFountException ||
                                        ex is DbUpdateConcurrencyException)
             {
                 return NotFound();
@@ -115,7 +115,7 @@ namespace Restaurant_Orders.Controllers
 
                 return NoContent();
             }
-            catch (Exception ex) when (ex is MenuItemDoesNotExists ||
+            catch (Exception ex) when (ex is MenuItemNotFountException ||
                                        ex is DbUpdateConcurrencyException)
             {
                 return NotFound();

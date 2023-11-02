@@ -1,7 +1,7 @@
 ﻿using RestaurantOrder.Data.Models;
 using System.ComponentModel.DataAnnotations;
 
-namespace Restaurant_Orders.Models.DTOs
+namespace RestaurantOrder.Core.DTOs
 {
     public class OrderStatusDTO : VersionDTO
     {

@@ -35,10 +35,10 @@ namespace Restaurant_Orders.Services
 
             if (menuItem == null)
             {
-                throw new MenuItemDoesNotExists();
+                throw new MenuItemNotFountException();
             }
 
-            return menuItem.toMenuItemDTO();
+            return menuItem.ToMenuItemDTO();
         }
 
         public async Task<MenuItemDTO> Create(MenuItemDTO item)
@@ -47,7 +47,7 @@ namespace Restaurant_Orders.Services
             _menuItemRepository.Add(menuItem);
             await _menuItemRepository.Commit();
 
-            return menuItem.toMenuItemDTO();
+            return menuItem.ToMenuItemDTO();
         }
 
         public async Task<MenuItemDTO> Update(MenuItemDTO menuItemDTO)
@@ -57,7 +57,7 @@ namespace Restaurant_Orders.Services
 
             if (updateCount <= 0)
             {
-                throw new MenuItemDoesNotExists();
+                throw new MenuItemNotFountException();
             }
 
             return menuItemDTO;
@@ -70,7 +70,7 @@ namespace Restaurant_Orders.Services
 
             if(deleteCount <= 0)
             {
-                throw new MenuItemDoesNotExists();
+                throw new MenuItemNotFountException();
             }
         }
 
@@ -94,7 +94,7 @@ namespace Restaurant_Orders.Services
                 Page = queryDetails.Page,
                 PageSize = queryDetails.PageSize,
                 TotalItems = pageData.Total,
-                ItemList = pageData.Data.Select(menuItem => menuItem.toMenuItemDTO())
+                ItemList = pageData.Data.Select(menuItem => menuItem.ToMenuItemDTO())
             };
         }
 

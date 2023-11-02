@@ -1,32 +1,36 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RestaurantOrder.Data.Models;
+using RestaurantOrder.Data.Models.DTOs;
+using RestaurantOrder.Data.Services;
 
 namespace RestaurantOrder.Data.Repositories
 {
     public interface IOrderRepository
     {
-        void Add(Order order);
+        Order Add(Order order);
         Task Commit();
-        void Delete(Order order, Guid version);
-        IQueryable<Order> GetAll();
+        void Delete(long id, Guid version);
+        Task<QueryResult<Order>> GetAll(QueryDetailsDTO<Order> queryDetails);
         Task<Order?> GetById(long id);
         Task<bool> OrderExists(long id);
-        void UpdateOrder(Order order, Guid? version);
+        Order UpdateOrder(Order order, Guid originalVersion);
     }
 
     public class OrderRepository : IOrderRepository
     {
         private readonly RestaurantContext _dbContext;
+        private readonly IPaginationService<Order> _paginationService;
 
-        public OrderRepository(RestaurantContext dbContext)
+        public OrderRepository(RestaurantContext dbContext, IPaginationService<Order> paginationService)
         {
             _dbContext = dbContext;
-
+            _paginationService = paginationService;
         }
 
-        public void Add(Order order)
+        public Order Add(Order order)
         {
             _dbContext.Orders.Add(order);
+            return order;
         }
 
         public async Task Commit()
@@ -34,20 +38,32 @@ namespace RestaurantOrder.Data.Repositories
             await _dbContext.SaveChangesAsync();
         }
 
-        public void Delete(Order order, Guid version)
+        public void Delete(long id, Guid version)
         {
-            _dbContext.Entry(order).State = EntityState.Deleted;
-            _dbContext.Entry(order).Property("Version").OriginalValue = version;
+            var entry = _dbContext.Entry(new Order { Id = id });
+            entry.State = EntityState.Deleted;
+            entry.Property("Version").OriginalValue = version;
         }
 
-        public IQueryable<Order> GetAll()
+        public async Task<QueryResult<Order>> GetAll(QueryDetailsDTO<Order> queryDetails)
         {
-            return _dbContext.Orders.Where(order => true);
+            var query = _dbContext.Orders.AsQueryable();
+            foreach (var whereQuery in queryDetails.WhereQueries)
+            {
+                query = query.Where(whereQuery);
+            }
+
+            if (queryDetails.OrderingExpr != null)
+            {
+                query = queryDetails.SortOrder == "asc" ? query.OrderBy(queryDetails.OrderingExpr) : query.OrderByDescending(queryDetails.OrderingExpr);
+            }
+
+            return await _paginationService.Paginate(query, queryDetails.Page, queryDetails.PageSize);
         }
 
         public async Task<Order?> GetById(long id)
         {
-            return await _dbContext.Orders.FirstOrDefaultAsync(order => order.Id == id);
+            return await _dbContext.Orders.AsNoTracking().FirstOrDefaultAsync(order => order.Id == id);
         }
 
         public async Task<bool> OrderExists(long id)
@@ -55,15 +71,25 @@ namespace RestaurantOrder.Data.Repositories
             return await _dbContext.Orders.AnyAsync(order => order.Id == id);
         }
 
-        public void UpdateOrder(Order order, Guid? version)
+        public Order UpdateOrder(Order order, Guid originalVersion)
         {
-            if(version == null)
+            var updatedOrder = new Order
             {
-                throw new ArgumentNullException(nameof(version));
-            }
+                Id = order.Id,
+                CreatedAt = order.CreatedAt,
+                CustomerId = order.CustomerId,
+                Status = order.Status,
+                Total = order.Total,
+                Version = Guid.NewGuid(),
+                OrderItems = order.OrderItems
+            };
 
-            _dbContext.Entry(order).State = EntityState.Modified;
-            _dbContext.Entry(order).Property("Version").OriginalValue = version.Value;
+            var entry = _dbContext.Entry(updatedOrder);
+            
+            entry.State = EntityState.Modified;
+            entry.Property("Version").OriginalValue = originalVersion;
+
+            return updatedOrder;
         }
     }
 }

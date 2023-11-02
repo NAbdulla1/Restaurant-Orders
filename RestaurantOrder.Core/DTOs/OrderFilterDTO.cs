@@ -1,6 +1,6 @@
 ﻿using RestaurantOrder.Data.Models;
 
-namespace Restaurant_Orders.Models.DTOs
+namespace RestaurantOrder.Core.DTOs
 {
     public class OrderFilterDTO
     {

@@ -1,12 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Restaurant_Orders.Exceptions;
 using Restaurant_Orders.Extensions;
-using Restaurant_Orders.Models.DTOs;
 using Restaurant_Orders.Services;
+using RestaurantOrder.Core.DTOs;
+using RestaurantOrder.Core.Exceptions;
 using RestaurantOrder.Data.Models;
-using RestaurantOrder.Data.Repositories;
 using System.Net.Mime;
 
 namespace Restaurant_Orders.Controllers
@@ -15,42 +14,29 @@ namespace Restaurant_Orders.Controllers
     [ApiController]
     public class OrdersController : ControllerBase
     {
-        private readonly IOrderRepository _orderRepository;
-        private readonly IUserRepository _userRepository;
-        private readonly IOrderItemRepository _orderItemRepository;
         private readonly IUserService _userService;
         private readonly IOrderService _orderService;
-        private readonly IPaginationService<Order> _paginationService;
 
         public OrdersController(
-            IOrderRepository orderRepository,
-            IUserRepository userRepository,
-            IOrderItemRepository orderItemRepository,
             IUserService userService,
-            IOrderService orderService,
-            IPaginationService<Order> paginationService)
+            IOrderService orderService)
         {
-            _orderRepository = orderRepository;
-            _userRepository = userRepository;
-            _orderItemRepository = orderItemRepository;
             _userService = userService;
             _orderService = orderService;
-            _paginationService = paginationService;
         }
 
         [HttpGet]
         [Authorize(Roles = "RestaurantOwner")]
         [Produces(MediaTypeNames.Application.Json)]
-        public async Task<ActionResult<PagedData<Order>>> GetOrder([FromQuery] IndexingDTO indexData, [FromQuery] OrderFilterDTO orderFilters)
+        public async Task<ActionResult<PagedData<OrderDTO>>> GetOrder([FromQuery] IndexingDTO indexData, [FromQuery] OrderFilterDTO orderFilters)
         {
-            if (indexData.SortBy != null && !typeof(Order).FieldExists(indexData.SortBy))
+            if (indexData.SortBy != null && !typeof(OrderDTO).FieldExists(indexData.SortBy))
             {
-                ModelState.AddModelError(nameof(indexData.SortBy), "Can't find the provided sort property.");
+                ModelState.AddModelError(nameof(indexData.SortBy), $"Can't find the provided sort property: '{indexData.SortBy}'.");
                 return ValidationProblem();
             }
 
-            var query = _orderService.PrepareIndexQuery(_orderRepository.GetAll(), indexData, orderFilters);
-            var page = await _paginationService.Paginate(query, indexData);
+            var page = await _orderService.Get(indexData, orderFilters);
 
             return Ok(page);
         }
@@ -58,18 +44,17 @@ namespace Restaurant_Orders.Controllers
         [HttpGet("customer")]
         [Authorize(Roles = "Customer")]
         [Produces(MediaTypeNames.Application.Json)]
-        public async Task<ActionResult<PagedData<Order>>> GetOrder([FromQuery] IndexingDTO indexData)
+        public async Task<ActionResult<PagedData<OrderDTO>>> GetOrder([FromQuery] IndexingDTO indexData)
         {
-            if (indexData.SortBy != null && !typeof(Order).FieldExists(indexData.SortBy))
+            if (indexData.SortBy != null && !typeof(OrderDTO).FieldExists(indexData.SortBy))
             {
-                ModelState.AddModelError(nameof(indexData.SortBy), "Can't find the provided sort property.");
+                ModelState.AddModelError(nameof(indexData.SortBy), $"Can't find the provided sort property: '{indexData.SortBy}'.");
                 return ValidationProblem();
             }
 
-            var orderFilters = new OrderFilterDTO { CustomerId = _userService.GetCurrentUser(HttpContext).Id };
+            var orderFilters = new OrderFilterDTO { CustomerId = _userService.GetCurrentAuthenticatedUser(HttpContext).Id };
 
-            var query = _orderService.PrepareIndexQuery(_orderRepository.GetAll(), indexData, orderFilters);
-            var page = await _paginationService.Paginate(query, indexData);
+            var page = await _orderService.Get(indexData, orderFilters);
 
             return Ok(page);
         }
@@ -79,17 +64,18 @@ namespace Restaurant_Orders.Controllers
         [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<Order>> GetOrder(long id)
+        public async Task<ActionResult<OrderDTO>> GetOrder(long id)
         {
-            var user = _userService.GetCurrentUser(HttpContext);
-            Order? order;
-            if (user != null && (await _userRepository.GetById(user.Id))?.UserType == UserType.Customer)
+            var user = _userService.GetCurrentAuthenticatedUser(HttpContext);
+
+            OrderDTO? order;
+            if (user != null && user.UserType == UserType.Customer.ToString())
             {
-                order = await _orderRepository.GetById(id);
+                order = await _orderService.GetById(id, user.Id);
             }
             else
             {
-                order = await _orderRepository.GetById(id);
+                order = await _orderService.GetById(id);
             }
 
             if (order == null)
@@ -107,34 +93,23 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Order>> UpdateOrderStatus(long id, OrderStatusDTO orderStatusDTO)
+        public async Task<ActionResult<OrderDTO>> UpdateOrderStatus(long id, OrderStatusDTO orderStatusDTO)
         {
-            var order = await _orderRepository.GetById(id);
-            if (order == null)
+            try
+            {
+                var order = await _orderService.UpdateStatus(id, orderStatusDTO.Status, orderStatusDTO.Version);
+                return Ok(order);
+            }
+            catch (OrderNotFoundException)
             {
                 return Problem(
-                    title: "Unable to save changes. The order was deleted by someone else.",
+                    title: "Unable to save changes. The order is not found.",
                     statusCode: 404
                 );
             }
-
-            return await UpdateStatus(orderStatusDTO, order);
-        }
-
-        private async Task<ActionResult<Order>> UpdateStatus(OrderStatusDTO orderStatusDTO, Order order)
-        {
-            order.Status = orderStatusDTO.Status;
-            order.Version = Guid.NewGuid();
-
-            _orderRepository.UpdateOrder(order, orderStatusDTO.Version);
-            try
-            {
-                await _orderRepository.Commit();
-                return Ok(order);
-            }
             catch (DbUpdateConcurrencyException)
             {
-                return await ConcurrentErrorResponse(order.Id);
+                return await ConcurrentErrorResponse(id);
             }
         }
 
@@ -146,30 +121,30 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Order>> UpdateOrder(long id, OrderUpdateDTO orderData)
+        public async Task<ActionResult<OrderDTO>> UpdateOrder(long id, OrderUpdateDTO orderData)
         {
-            bool validationProblem = CustomValidation(orderData);
+            var order = await _orderService.GetById(id);
+            if (order == null)
+            {
+                return Problem(
+                    title: "Unable to save changes. The order is not found.",
+                    statusCode: 404
+                );
+            }
+
+            if (order.CustomerId != _userService.GetCurrentAuthenticatedUser(HttpContext).Id)
+            {
+                return Problem(title: "Not allowed to update other users order.", statusCode: 403);
+            }
+
+            bool validationProblem = ValidateUpdateOrderData(orderData);
 
             if (validationProblem)
             {
                 return ValidationProblem();
             }
 
-            var order = await _orderRepository.GetById(id);
-            if (order == null)
-            {
-                return Problem(
-                    title: "Unable to save changes. The order was deleted by someone else.",
-                    statusCode: 404
-                );
-            }
-
-            if (order.CustomerId != _userService.GetCurrentUser(HttpContext).Id)
-            {
-                return Problem(title: "Not allowed to update other users order.", statusCode: 403);
-            }
-
-            if (order.Status != OrderStatus.CREATED && order.Status != OrderStatus.PROCESSING)
+            if (order.Status != OrderStatus.CREATED.ToString() && order.Status != OrderStatus.PROCESSING.ToString())
             {
                 ModelState.AddModelError(string.Empty, $"Unable to modify order because the order is not in '{OrderStatus.CREATED}' or '{OrderStatus.PROCESSING}' state.");
                 return ValidationProblem();
@@ -177,16 +152,11 @@ namespace Restaurant_Orders.Controllers
 
             try
             {
-                List<OrderItem> deleteExistingOrderItems = _orderService.RemoveExistingOrderItems(orderData.RemoveMenuItemIds, order);
-                _orderItemRepository.RemoveMany(deleteExistingOrderItems);
+                order = await _orderService.UpdateOrderItems(order, orderData);
 
-                await _orderService.AddOrderItems(orderData.AddMenuItemIds, order);
-                order.Version = Guid.NewGuid();
-
-                _orderRepository.UpdateOrder(order, orderData.Version.Value);
-                await _orderRepository.Commit();
+                return Ok(order);
             }
-            catch (MenuItemDoesNotExists ex)
+            catch (MenuItemNotFountException ex)
             {
                 ModelState.AddModelError(nameof(orderData.AddMenuItemIds), ex.Message);
                 return ValidationProblem();
@@ -195,11 +165,9 @@ namespace Restaurant_Orders.Controllers
             {
                 return await ConcurrentErrorResponse(id);
             }
-
-            return Ok(order);
         }
 
-        private bool CustomValidation(OrderUpdateDTO orderData)
+        private bool ValidateUpdateOrderData(OrderUpdateDTO orderData)
         {
             var validationProblem = false;
             if (!orderData.AddMenuItemIds.Any() && !orderData.RemoveMenuItemIds.Any())
@@ -209,9 +177,10 @@ namespace Restaurant_Orders.Controllers
                 validationProblem = true;
             }
 
-            if (orderData.Version == null)
+            var itemCountForAddMenuItems = _orderService.GetItemsCountById(orderData.AddMenuItemIds);
+            if (orderData.RemoveMenuItemIds.Any(remItemId => itemCountForAddMenuItems.ContainsKey(remItemId)))
             {
-                ModelState.AddModelError(nameof(orderData.Version), $"The {nameof(orderData.Version)} field is required.");
+                ModelState.AddModelError(string.Empty, "It is not possible to add and remove the same menu item at the same time.");
                 validationProblem = true;
             }
 
@@ -224,18 +193,15 @@ namespace Restaurant_Orders.Controllers
         [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<Order>> CreateOrder(NewOrderDTO newOrderDTO)
+        public async Task<ActionResult<OrderDTO>> CreateOrder(NewOrderDTO newOrderDTO)
         {
             try
             {
-                var order = await _orderService.BuildOrder(newOrderDTO.menuItemIds, _userService.GetCurrentUser(HttpContext).Id);
-
-                _orderRepository.Add(order);
-                await _orderRepository.Commit();
+                var order = await _orderService.Create(newOrderDTO.menuItemIds, _userService.GetCurrentAuthenticatedUser(HttpContext).Id);
 
                 return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
             }
-            catch (MenuItemDoesNotExists ex)
+            catch (MenuItemNotFountException ex)
             {
                 ModelState.AddModelError(nameof(newOrderDTO.menuItemIds), ex.Message);
                 return ValidationProblem();
@@ -247,30 +213,17 @@ namespace Restaurant_Orders.Controllers
         [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> DeleteOrder(long id, Guid version)
+        public async Task<ActionResult> DeleteOrder(long id, Guid version)
         {
-            var order = await _orderRepository.GetById(id);
-            if (order == null)
-            {
-                return Problem(
-                    title: "Unable to save changes. The order was deleted by someone else.",
-                    statusCode: 404
-                );
-            }
-
             try
             {
-                _orderRepository.Delete(order, version);
-                await _orderRepository.Commit();
+                await _orderService.Delete(id, version);
 
                 return NoContent();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (Exception ex) when (ex is OrderNotFoundException || ex is DbUpdateConcurrencyException)
             {
-                return Problem(
-                    title: "The record you attempted to delete was modified by another user after you got the original value. Please fetch the order again to get new version.",
-                    statusCode: 404
-                );
+                return await ConcurrentErrorResponse(id);
             }
         }
 
@@ -282,9 +235,9 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Order>> CancelOrder(long id, VersionDTO versionDTO)
+        public async Task<ActionResult<OrderDTO>> CancelOrder(long id, VersionDTO versionDTO)
         {
-            var order = await _orderRepository.GetById(id);
+            var order = await _orderService.GetById(id);
             if (order == null)
             {
                 return Problem(
@@ -293,18 +246,27 @@ namespace Restaurant_Orders.Controllers
                 );
             }
 
-            if (order.CustomerId != _userService.GetCurrentUser(HttpContext).Id)
+            if (order.CustomerId != _userService.GetCurrentAuthenticatedUser(HttpContext).Id)
             {
                 return Problem(title: "Not allowed to cancel other users order.", statusCode: 403);
             }
 
-            if (order.Status != OrderStatus.CREATED && order.Status != OrderStatus.PROCESSING)
+            if (order.Status != OrderStatus.CREATED.ToString() && order.Status != OrderStatus.PROCESSING.ToString())
             {
                 ModelState.AddModelError(string.Empty, $"Unable to modify order because the order is not in '{OrderStatus.CREATED}' or '{OrderStatus.PROCESSING}' state.");
                 return ValidationProblem();
             }
 
-            return await UpdateStatus(new OrderStatusDTO { Status = OrderStatus.CANCELED, Version = versionDTO.Version }, order);
+            try
+            {
+                order = await _orderService.UpdateStatus(order, OrderStatus.CANCELED, versionDTO.Version);
+
+                return Ok(order);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return await ConcurrentErrorResponse(id);
+            }
         }
 
         [HttpPost("{id}/pay")]
@@ -315,9 +277,9 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<Order>> PayOrder(long id, VersionDTO versionDTO)
+        public async Task<ActionResult<OrderDTO>> PayOrder(long id, VersionDTO versionDTO)
         {
-            var order = await _orderRepository.GetById(id);
+            var order = await _orderService.GetById(id);
             if (order == null)
             {
                 return Problem(
@@ -326,23 +288,32 @@ namespace Restaurant_Orders.Controllers
                 );
             }
 
-            if (order.CustomerId != _userService.GetCurrentUser(HttpContext).Id)
+            if (order.CustomerId != _userService.GetCurrentAuthenticatedUser(HttpContext).Id)
             {
                 return Problem(title: "Not allowed to pay other users order.", statusCode: 403);
             }
 
-            if (order.Status != OrderStatus.PROCESSING)
+            if (order.Status != OrderStatus.PROCESSING.ToString())
             {
                 ModelState.AddModelError(string.Empty, $"Unable to modify order because the order is not in '{OrderStatus.PROCESSING}' state.");
                 return ValidationProblem();
             }
 
-            return await UpdateStatus(new OrderStatusDTO { Status = OrderStatus.BILLED, Version = versionDTO.Version }, order);
+            try
+            {
+                order = await _orderService.UpdateStatus(order, OrderStatus.BILLED, versionDTO.Version);
+
+                return Ok(order);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return await ConcurrentErrorResponse(id);
+            }
         }
 
-        private async Task<ActionResult<Order>> ConcurrentErrorResponse(long id)
+        private async Task<ActionResult> ConcurrentErrorResponse(long id)
         {
-            if (!(await _orderRepository.OrderExists(id)))
+            if (!await _orderService.IsOrderExists(id))
             {
                 return Problem(
                     title: "Unable to save changes. The order was deleted by someone else.",

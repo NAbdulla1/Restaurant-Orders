@@ -10,6 +10,7 @@ namespace RestaurantOrder.Data.Extensions
         public static IServiceCollection RegisterDataServices(this IServiceCollection services)
         {
             return services.AddScoped<IPaginationService<MenuItem>, PaginationService<MenuItem>>()
+                .AddScoped<IPaginationService<Order>, PaginationService<Order>>()
                 .AddScoped<IUserRepository, UserRepository>()
                 .AddScoped<IMenuItemRepository, MenuItemRepository>()
                 .AddScoped<IOrderItemRepository, OrderItemRepository>()

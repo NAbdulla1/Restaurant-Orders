@@ -4,11 +4,13 @@ namespace RestaurantOrder.Data.Repositories
 {
     public interface IOrderItemRepository
     {
-        void RemoveMany(List<OrderItem> deleteExistingOrderItems);
+        OrderItem Add(OrderItem item);
+        void DeleteMany(List<OrderItem> deleteExistingOrderItems);
         IQueryable<OrderItem> SearchInName(string searchTerm);
+        OrderItem Update(OrderItem item);
     }
 
-    public class OrderItemRepository: IOrderItemRepository
+    public class OrderItemRepository : IOrderItemRepository
     {
         private readonly RestaurantContext _dbContext;
 
@@ -17,7 +19,7 @@ namespace RestaurantOrder.Data.Repositories
             _dbContext = dbContext;
         }
 
-        public void RemoveMany(List<OrderItem> deleteExistingOrderItems)
+        public void DeleteMany(List<OrderItem> deleteExistingOrderItems)
         {
             _dbContext.RemoveRange(deleteExistingOrderItems);
         }
@@ -26,6 +28,19 @@ namespace RestaurantOrder.Data.Repositories
         {
             return _dbContext.OrderItems.Where(
                 orderItems => orderItems.MenuItemName != null && orderItems.MenuItemName.Contains(searchTerm));
+        }
+
+        public OrderItem Add(OrderItem item)
+        {
+            _dbContext.OrderItems.Add(item);
+            return item;
+        }
+
+        public OrderItem Update(OrderItem item)
+        {
+            var entry = _dbContext.OrderItems.Attach(item);
+            entry.State = Microsoft.EntityFrameworkCore.EntityState.Modified;
+            return item;
         }
     }
 }

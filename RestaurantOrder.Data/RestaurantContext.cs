@@ -106,6 +106,10 @@ namespace RestaurantOrder.Data
                 .WithOne(orderItem => orderItem.Order)
                 .HasForeignKey(orderItem => orderItem.OrderId)
                 .IsRequired();
+
+            modelBuilder.Entity<Order>()
+                .Navigation(order => order.OrderItems)
+                .AutoInclude();
         }
 
         private void BuildOrderItemModelConstraints(ModelBuilder modelBuilder)
