@@ -1,8 +1,7 @@
 ﻿namespace RestaurantOrder.Data.Models
 {
-    public class Order
+    public class Order : ModelBase
     {
-        public long Id { get; set; }
         public long CustomerId { get; set; }
         public decimal Total { get; set; }
         public OrderStatus Status { get; set; }

@@ -1,7 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using RestaurantOrder.Data.Models;
-using RestaurantOrder.Data.Repositories;
-using RestaurantOrder.Data.Services;
 
 namespace RestaurantOrder.Data.Extensions
 {
@@ -9,12 +6,7 @@ namespace RestaurantOrder.Data.Extensions
     {
         public static IServiceCollection RegisterDataServices(this IServiceCollection services)
         {
-            return services.AddScoped<IPaginationService<MenuItem>, PaginationService<MenuItem>>()
-                .AddScoped<IPaginationService<Order>, PaginationService<Order>>()
-                .AddScoped<IUserRepository, UserRepository>()
-                .AddScoped<IMenuItemRepository, MenuItemRepository>()
-                .AddScoped<IOrderItemRepository, OrderItemRepository>()
-                .AddScoped<IOrderRepository, OrderRepository>();
+            return services.AddScoped<IUnitOfWork, UnitOfWork>();
         }
     }
 }

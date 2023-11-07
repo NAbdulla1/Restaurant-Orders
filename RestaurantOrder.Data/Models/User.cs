@@ -6,12 +6,8 @@ namespace RestaurantOrder.Data.Models
 {
     [Table("users")]
     [Index(nameof(Email), IsUnique = true)]
-    public class User
+    public class User : ModelBase
     {
-        [Key]
-        [Column("id")]
-        public long Id { get; set; }
-
         [Required]
         [Column("first_name")]
         [StringLength(50)]

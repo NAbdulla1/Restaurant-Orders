@@ -1,6 +1,6 @@
 ﻿namespace RestaurantOrder.Data.Models
 {
-    public class OrderItem
+    public class OrderItem :ModelBase
     {
         public long Id { get; set; }
         public long OrderId { get; set; }
