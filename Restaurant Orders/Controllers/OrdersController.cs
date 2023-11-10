@@ -145,7 +145,7 @@ namespace Restaurant_Orders.Controllers
 
             try
             {
-                order = await _orderService.UpdateOrderItems(order, orderData);
+                order = await _orderService.UpdateOrderItems(id, orderData);
 
                 return Ok(order);
             }
@@ -226,13 +226,13 @@ namespace Restaurant_Orders.Controllers
 
             if (order.Status != OrderStatus.CREATED.ToString() && order.Status != OrderStatus.PROCESSING.ToString())
             {
-                ModelState.AddModelError(string.Empty, $"Unable to modify order because the order is not in '{OrderStatus.CREATED}' or '{OrderStatus.PROCESSING}' state.");
+                ModelState.AddModelError(string.Empty, $"Unable to cancel order because the order is not in '{OrderStatus.CREATED}' or '{OrderStatus.PROCESSING}' state.");
                 return ValidationProblem();
             }
 
             try
             {
-                order = await _orderService.UpdateStatus(order, OrderStatus.CANCELED, versionDTO.Version);
+                order = await _orderService.UpdateStatus(order.Id, OrderStatus.CANCELED, versionDTO.Version);
 
                 return Ok(order);
             }
@@ -268,13 +268,13 @@ namespace Restaurant_Orders.Controllers
 
             if (order.Status != OrderStatus.PROCESSING.ToString())
             {
-                ModelState.AddModelError(string.Empty, $"Unable to modify order because the order is not in '{OrderStatus.PROCESSING}' state.");
+                ModelState.AddModelError(string.Empty, $"Unable to pay order because the order is not in '{OrderStatus.PROCESSING}' state.");
                 return ValidationProblem();
             }
 
             try
             {
-                order = await _orderService.UpdateStatus(order, OrderStatus.BILLED, versionDTO.Version);
+                order = await _orderService.UpdateStatus(order.Id, OrderStatus.BILLED, versionDTO.Version);
 
                 return Ok(order);
             }

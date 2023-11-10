@@ -4,6 +4,7 @@ using RestaurantOrder.Core.DTOs;
 using RestaurantOrder.Core.Exceptions;
 using RestaurantOrder.Core.Extensions;
 using RestaurantOrder.Core.Services;
+using RestaurantOrder.Data;
 using RestaurantOrder.Data.Models;
 using RestaurantOrder.Data.Models.DTOs;
 using RestaurantOrder.Data.Repositories;
@@ -18,22 +19,19 @@ namespace Restaurant_Orders.Services
         Task<PagedData<OrderDTO>> Get(IndexingDTO indexData, OrderFilterDTO orderFilterData);
         Task<OrderDTO?> GetById(long id, long? userId = null);
         Task<bool> IsOrderExists(long id);
-        Task<OrderDTO> UpdateOrderItems(OrderDTO order, OrderUpdateDTO orderData);
+        Task<OrderDTO> UpdateOrderItems(long id, OrderUpdateDTO orderData);
         Task<OrderDTO> UpdateStatus(long id, OrderStatus newStatus, Guid version);
-        Task<OrderDTO> UpdateStatus(OrderDTO orderDTO, OrderStatus newStatus, Guid version);
     }
 
     public class OrderService : IOrderService
     {
-        private readonly IOrderRepository _orderRepository;
-        private readonly IOrderItemRepository _orderItemRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly int _defaultPageSize;
         private readonly IOrderItemService _orderItemService;
 
-        public OrderService(IOrderRepository orderRepository, IOrderItemRepository orderItemRepository, IConfiguration configuration, IOrderItemService orderItemService)
+        public OrderService(IUnitOfWork unitOfWork, IConfiguration configuration, IOrderItemService orderItemService)
         {
-            _orderRepository = orderRepository;
-            _orderItemRepository = orderItemRepository;
+            _unitOfWork = unitOfWork;
             _defaultPageSize = configuration.GetValue<int>("DefaultPageSize");
             _orderItemService = orderItemService;
         }
@@ -59,7 +57,7 @@ namespace Restaurant_Orders.Services
 
             AddSortQuery(queryDetails, indexData.SortBy, indexData.SortOrder);
 
-            var result = await _orderRepository.GetAll(queryDetails);
+            var result = await _unitOfWork.Orders.GetAllAsync(queryDetails);
 
             return new PagedData<OrderDTO>
             {
@@ -72,7 +70,7 @@ namespace Restaurant_Orders.Services
 
         public async Task<OrderDTO?> GetById(long id, long? userId = null)
         {
-            var order = await _orderRepository.GetById(id);
+            var order = await _unitOfWork.Orders.GetByIdAsync(id);
             if (userId != null && (order == null || order.CustomerId != userId))
             {
                 order = null;
@@ -83,40 +81,29 @@ namespace Restaurant_Orders.Services
 
         public async Task Delete(long id, Guid version)
         {
-            _orderRepository.Delete(id, version);
-            await _orderRepository.Commit();
+            _unitOfWork.Orders.Delete(new Order { Id = id, Version = version});
+            await _unitOfWork.Commit();
         }
 
         public async Task<OrderDTO> UpdateStatus(long id, OrderStatus newStatus, Guid version)
         {
-            var order = await _orderRepository.GetById(id);
-            if (order == null)
-            {
-                throw new OrderNotFoundException();
-            }
+            var order = await _unitOfWork.Orders.GetByIdAsync(id) ?? throw new OrderNotFoundException();
+            order.Status = newStatus;
+            order.Version = Guid.NewGuid();
 
-            return await UpdateStatus(order.ToOrderDTO(), newStatus, version);
-        }
-
-        public async Task<OrderDTO> UpdateStatus(OrderDTO orderDTO, OrderStatus newStatus, Guid version)
-        {
-            orderDTO.Status = newStatus.ToString();
-            var order = orderDTO.ToOrder();
-
-            _orderRepository.UpdateOrder(order, version);
-            await _orderRepository.Commit();
+            await _unitOfWork.Commit();
 
             return order.ToOrderDTO();
         }
 
         public async Task<bool> IsOrderExists(long id)
         {
-            return await _orderRepository.OrderExists(id);
+            return await _unitOfWork.OrderItems.IsItemExistsAsync(id);
         }
 
-        public async Task<OrderDTO> UpdateOrderItems(OrderDTO orderDTO, OrderUpdateDTO orderData)
+        public async Task<OrderDTO> UpdateOrderItems(long id, OrderUpdateDTO orderData)
         {
-            var order = orderDTO.ToOrder();
+            var order = await _unitOfWork.Orders.GetByIdAsync(id) ?? throw new OrderNotFoundException();
             var deleteExistingOrderItems = await _orderItemService.UpdateOrRemoveExistingOrderItems(orderData.RemoveMenuItemIds.CountFrequency(), order);
 
             var newOrderItems = await _orderItemService.AddNewOrUpdateExistingOrderItems(orderData.AddMenuItemIds.CountFrequency(), order);
@@ -128,9 +115,9 @@ namespace Restaurant_Orders.Services
 
             var orderTotal = CalculateOrderTotal(order.OrderItems);
             order.Total = orderTotal;
+            order.Version = Guid.NewGuid();
 
-            order = _orderRepository.UpdateOrder(order, orderData.Version);
-            await _orderRepository.Commit();
+            await _unitOfWork.Commit();
 
             return order.ToOrderDTO();
         }
@@ -153,8 +140,8 @@ namespace Restaurant_Orders.Services
                 Version = Guid.NewGuid()
             };
 
-            order = _orderRepository.Add(order);
-            await _orderRepository.Commit();
+            _unitOfWork.Orders.Add(order);
+            await _unitOfWork.Commit();
 
             return order.ToOrderDTO();
         }
@@ -167,7 +154,7 @@ namespace Restaurant_Orders.Services
         private void AddSearchQuery(QueryDetailsDTO<Order> queryDetails, string searchTerm)
         {
             queryDetails.WhereQueries.Add(order =>
-                _orderItemRepository.SearchInName(searchTerm)
+                _unitOfWork.OrderItems.SearchInName(searchTerm)
                     .Select(oi => oi.OrderId)
                         .Contains(order.Id));
         }

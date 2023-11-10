@@ -2,9 +2,9 @@
 using RestaurantOrder.Core.DTOs;
 using RestaurantOrder.Core.Exceptions;
 using RestaurantOrder.Core.Extensions;
+using RestaurantOrder.Data;
 using RestaurantOrder.Data.Models;
 using RestaurantOrder.Data.Models.DTOs;
-using RestaurantOrder.Data.Repositories;
 using System.Linq.Expressions;
 
 namespace Restaurant_Orders.Services
@@ -20,18 +20,18 @@ namespace Restaurant_Orders.Services
 
     public class MenuItemService : IMenuItemService
     {
-        private readonly IMenuItemRepository _menuItemRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly int _defaultPageSize;
 
-        public MenuItemService(IMenuItemRepository menuItemRepository, IConfiguration configuration)
+        public MenuItemService(IUnitOfWork unitOfWork, IConfiguration configuration)
         {
-            _menuItemRepository = menuItemRepository;
+            _unitOfWork = unitOfWork;
             _defaultPageSize = configuration.GetValue<int>("DefaultPageSize");
         }
 
         public async Task<MenuItemDTO> GetById(long menuItemId)
         {
-            var menuItem = await _menuItemRepository.GetById(menuItemId);
+            var menuItem = await _unitOfWork.MenuItems.GetByIdAsync(menuItemId);
 
             if (menuItem == null)
             {
@@ -44,34 +44,41 @@ namespace Restaurant_Orders.Services
         public async Task<MenuItemDTO> Create(MenuItemDTO item)
         {
             var menuItem = item.ToMenuItem();
-            _menuItemRepository.Add(menuItem);
-            await _menuItemRepository.Commit();
+            _unitOfWork.MenuItems.Add(menuItem);
+            await _unitOfWork.Commit();
 
             return menuItem.ToMenuItemDTO();
         }
 
         public async Task<MenuItemDTO> Update(MenuItemDTO menuItemDTO)
         {
-            _menuItemRepository.UpdateMenuItem(menuItemDTO.ToMenuItem());
-            var updateCount = await _menuItemRepository.Commit();
+            var menuItem = await _unitOfWork.MenuItems.GetByIdAsync(menuItemDTO.Id);
 
-            if (updateCount <= 0)
+            if (menuItem == null)
             {
                 throw new MenuItemNotFountException();
             }
+
+            menuItem.Name = menuItemDTO.Name;
+            menuItem.Price = menuItemDTO.Price;
+            menuItem.Description = menuItemDTO.Description;
+
+            await _unitOfWork.Commit();
 
             return menuItemDTO;
         }
 
         public async Task Delete(long id)
         {
-            _menuItemRepository.Delete(new MenuItem { Id = id });
-            var deleteCount = await _menuItemRepository.Commit();
+            var menuItem = await _unitOfWork.MenuItems.GetByIdAsync(id);
 
-            if(deleteCount <= 0)
+            if (menuItem == null)
             {
                 throw new MenuItemNotFountException();
             }
+            _unitOfWork.MenuItems.Delete(menuItem);
+
+            await _unitOfWork.Commit();
         }
 
         public async Task<PagedData<MenuItemDTO>> Get(IndexingDTO indexData)
@@ -84,7 +91,7 @@ namespace Restaurant_Orders.Services
 
             AddSortQuery(queryDetails, indexData.SortBy, indexData.SortOrder);
 
-            var pageData = await _menuItemRepository.GetAll(queryDetails);
+            var pageData = await _unitOfWork.MenuItems.GetAllAsync(queryDetails);
 
             return new PagedData<MenuItemDTO>
             {

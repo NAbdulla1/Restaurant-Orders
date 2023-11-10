@@ -1,6 +1,6 @@
 ﻿using RestaurantOrder.Core.Exceptions;
+using RestaurantOrder.Data;
 using RestaurantOrder.Data.Models;
-using RestaurantOrder.Data.Repositories;
 
 namespace RestaurantOrder.Core.Services
 {
@@ -14,13 +14,11 @@ namespace RestaurantOrder.Core.Services
 
     public class OrderItemService : IOrderItemService
     {
-        private readonly IOrderItemRepository _orderItemRepository;
-        private readonly IMenuItemRepository _menuItemRepository;
+        private readonly IUnitOfWork _uintOfWork;
 
-        public OrderItemService(IOrderItemRepository orderItemRepository, IMenuItemRepository menuItemRepository)
+        public OrderItemService(IUnitOfWork unitOfWork)
         {
-            _orderItemRepository = orderItemRepository;
-            _menuItemRepository = menuItemRepository;
+            _uintOfWork = unitOfWork;
         }
 
         public async Task<IEnumerable<OrderItem>> AddNewOrUpdateExistingOrderItems(Dictionary<long, int> itemCountById, Order order)
@@ -39,12 +37,11 @@ namespace RestaurantOrder.Core.Services
                     existingOrderItem.MenuItemName = orderItem.MenuItemName;
                     existingOrderItem.MenuItemPrice = orderItem.MenuItemPrice;
                     existingOrderItem.MenuItemDescription = orderItem.MenuItemDescription;
-                    _orderItemRepository.Update(existingOrderItem);
                 }
                 else
                 {
-                    var newOrderItem = _orderItemRepository.Add(orderItem);
-                    addAsNew.Add(newOrderItem);
+                    _uintOfWork.OrderItems.Add(orderItem);
+                    addAsNew.Add(orderItem);
                 }
             }
 
@@ -71,12 +68,11 @@ namespace RestaurantOrder.Core.Services
                 else
                 {
                     orderItem.Quantity -= quantityToReduce;
-                    _orderItemRepository.Update(orderItem);
                     updatedOrderItems.Add(orderItem);
                 }
             }
 
-            var menuItems = await _menuItemRepository.GetByIds(updatedOrderItems.Select(oi => oi.MenuItemId.GetValueOrDefault()).ToList());
+            var menuItems = await _uintOfWork.MenuItems.GetByIdsAsync(updatedOrderItems.Select(oi => oi.MenuItemId.GetValueOrDefault()).ToList());
             foreach (var menuItem in menuItems)
             {
                 var orderItem = updatedOrderItems.FirstOrDefault(oi => oi.MenuItemId == menuItem.Id);
@@ -88,14 +84,14 @@ namespace RestaurantOrder.Core.Services
                 }
             }
 
-            _orderItemRepository.DeleteMany(deleteExistingOrderItems);
+            _uintOfWork.OrderItems.DeleteRange(deleteExistingOrderItems);
 
             return deleteExistingOrderItems;
         }
 
         public async Task<IEnumerable<MenuItem>> CheckAndGetMenuItems(Dictionary<long, int> itemCountById)
         {
-            var menuItems = await _menuItemRepository.GetByIds(itemCountById.Select(item => item.Key).ToList());
+            var menuItems = await _uintOfWork.MenuItems.GetByIdsAsync(itemCountById.Select(item => item.Key).ToList());
 
             var absentIds = itemCountById.Select(entry => entry.Key).Except(menuItems.Select(menuItem => menuItem.Id));
             if (absentIds.Any())

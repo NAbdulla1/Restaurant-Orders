@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Restaurant_Orders.Services;
 using RestaurantOrder.Core.DTOs;
+using RestaurantOrder.Data;
 using RestaurantOrder.Data.Models;
 using RestaurantOrder.Data.Repositories;
 
@@ -11,14 +12,14 @@ namespace RestaurantOrder.Core.Data
         public static async Task SeedAdmin(IServiceProvider services, OwnerConfigData ownerInfo)
         {
             var passwordService = services.GetRequiredService<IPasswordService>();
-            var userRepository = services.GetRequiredService<IUserRepository>();
+            var unitOfWork = services.GetRequiredService<IUnitOfWork>();
 
-            if (await userRepository.HasAnyAdmin())
+            if (await unitOfWork.Users.HasAnyAdmin())
             {
                 return;
             }
 
-            userRepository.Add(new User
+            unitOfWork.Users.Add(new User
             {
                 FirstName = ownerInfo.FirstName,
                 LastName = ownerInfo.LastName,
@@ -27,7 +28,7 @@ namespace RestaurantOrder.Core.Data
                 UserType = UserType.RestaurantOwner
             });
 
-            await userRepository.Commit();
+            await unitOfWork.Commit();
         }
     }
 }

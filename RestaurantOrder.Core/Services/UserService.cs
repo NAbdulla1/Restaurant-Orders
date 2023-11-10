@@ -2,6 +2,7 @@
 using RestaurantOrder.Core.DTOs;
 using RestaurantOrder.Core.Exceptions;
 using RestaurantOrder.Core.Extensions;
+using RestaurantOrder.Data;
 using RestaurantOrder.Data.Models;
 using RestaurantOrder.Data.Repositories;
 using System.Security.Claims;
@@ -20,20 +21,20 @@ namespace Restaurant_Orders.Services
 
     public class UserService : IUserService
     {
-        private readonly IUserRepository _userRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly IPasswordService _passwordService;
         private readonly ITokenService _tokenService;
 
-        public UserService(IUserRepository userRepository, IPasswordService passwordService, ITokenService tokenService)
+        public UserService(IUnitOfWork unitOfWork, IPasswordService passwordService, ITokenService tokenService)
         {
             _tokenService = tokenService;
-            _userRepository = userRepository;
+            _unitOfWork = unitOfWork;
             _passwordService = passwordService;
         }
 
         public async Task<UserDTO> CreateCustomer(CustomerRegisterDTO customer)
         {
-            var existingUser = await _userRepository.GetByEmail(customer.Email);
+            var existingUser = await _unitOfWork.Users.GetByEmail(customer.Email);
             if (existingUser != null)
             {
                 throw new CustomerAlreadyExistsException($"Another user already exists with the given email: '{customer.Email}'.");
@@ -48,19 +49,15 @@ namespace Restaurant_Orders.Services
                 UserType = UserType.Customer,
             };
 
-            user = _userRepository.Add(user);
-            await _userRepository.Commit();
+            _unitOfWork.Users.Add(user);
+            await _unitOfWork.Commit();
 
             return user.ToUserDTO();
         }
 
         public async Task<UserDTO> UpdateUser(long userId, UserUpdateDTO userUpdateDTO)
         {
-            var user = await _userRepository.GetById(userId);
-            if (user == null)
-            {
-                throw new UserNotFoundException();
-            }
+            var user = await _unitOfWork.Users.GetByIdAsync(userId) ?? throw new UserNotFoundException();
 
             user.FirstName = userUpdateDTO.FirstName;
             user.LastName = userUpdateDTO.LastName;
@@ -69,14 +66,14 @@ namespace Restaurant_Orders.Services
                 user.Password = _passwordService.HashPassword(userUpdateDTO.NewPassword);
             }
 
-            await _userRepository.Commit();
+            await _unitOfWork.Commit();
 
             return user.ToUserDTO();
         }
 
         public async Task<AccessTokenDTO> SignInUser(LoginPayloadDTO loginPayload)
         {
-            var user = await _userRepository.GetByEmail(loginPayload.Email);
+            var user = await _unitOfWork.Users.GetByEmail(loginPayload.Email);
 
             if (user == null || !_passwordService.VerifyPassword(user.Password, loginPayload.Password))
             {
@@ -104,11 +101,7 @@ namespace Restaurant_Orders.Services
 
         public async Task<UserDTO> GetUser(long userId)
         {
-            var user = await _userRepository.GetById(userId);
-            if (user == null)
-            {
-                throw new UserNotFoundException();
-            }
+            var user = await _unitOfWork.Users.GetByIdAsync(userId) ?? throw new UserNotFoundException();
 
             return user.ToUserDTO();
         }

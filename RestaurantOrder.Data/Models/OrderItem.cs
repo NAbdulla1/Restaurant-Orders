@@ -2,7 +2,6 @@
 {
     public class OrderItem :ModelBase
     {
-        public long Id { get; set; }
         public long OrderId { get; set; }
         public long? MenuItemId { get; set; }
         public string? MenuItemName { get; set; }
