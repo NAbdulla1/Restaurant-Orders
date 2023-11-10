@@ -9,8 +9,10 @@ file in that case) to speficy the following values in the `Restaurant Orders` pr
 - Change the `DefaultPageSize` if necessary to alter the default page size used in pagination of data if no `pageSize` is provided with the request.
 - Change the `ServerErrorLogFile` property to set the path of server error log if necessary.
 - Create the secrets:
+  - Initialize user secrets if not already: `dotnet user-secrets init`.
   - Admin Password: `dotnet user-secrets set OwnerInfo:Password <password>`.
-  - JWT Secret: `dotnet user-secrets set JWTInfo:Secret <a base64 encoded string>`. The base 64 encoded string can be generated from random bytes in "Git Bash" in windows with the command: `openssl rand -base64 32`.
+  - JWT Secret: `dotnet user-secrets set JWTInfo:Secret <a base64 encoded string>`.
+    The base 64 encoded string can be generated from random bytes in "Git Bash" in windows with the command: `openssl rand -base64 32`.
 
 ## Database migration
 First, navigate to the [`RestaturantOrder.Data`](RestaturantOrder.Data) project.
