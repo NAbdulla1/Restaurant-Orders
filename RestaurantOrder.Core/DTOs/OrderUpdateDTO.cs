@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace RestaurantOrder.Core.DTOs
 {
     [NotEmptyMenuItems]
-    public class OrderUpdateDTO : VersionDTO
+    public class OrderUpdateDTO
     {
         [Required]
         [ExclusiveMenuItems]

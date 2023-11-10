@@ -22,7 +22,6 @@ namespace RestaurantOrder.Core.DTOs
                 CustomerId = CustomerId,
                 Total = Total,
                 CreatedAt = CreatedAt,
-                Version = Version,
                 Status = statusValue,
                 OrderItems = OrderItems.Select(orderItem => orderItem.ToOrderItem()).ToList()
             };

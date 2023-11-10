@@ -99,10 +99,6 @@ namespace RestaurantOrder.Data
                 .IsRequired();
 
             modelBuilder.Entity<Order>()
-                .Property(order => order.Version)
-                .IsConcurrencyToken();
-
-            modelBuilder.Entity<Order>()
                 .HasMany(order => order.OrderItems)
                 .WithOne(orderItem => orderItem.Order)
                 .HasForeignKey(orderItem => orderItem.OrderId)

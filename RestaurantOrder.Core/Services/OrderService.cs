@@ -15,12 +15,12 @@ namespace Restaurant_Orders.Services
     public interface IOrderService
     {
         Task<OrderDTO> Create(ICollection<long> menuItemIds, long customerId);
-        Task Delete(long id, Guid version);
+        Task Delete(long id);
         Task<PagedData<OrderDTO>> Get(IndexingDTO indexData, OrderFilterDTO orderFilterData);
         Task<OrderDTO?> GetById(long id, long? userId = null);
         Task<bool> IsOrderExists(long id);
         Task<OrderDTO> UpdateOrderItems(long id, OrderUpdateDTO orderData);
-        Task<OrderDTO> UpdateStatus(long id, OrderStatus newStatus, Guid version);
+        Task<OrderDTO> UpdateStatus(long id, OrderStatus newStatus);
     }
 
     public class OrderService : IOrderService
@@ -79,17 +79,16 @@ namespace Restaurant_Orders.Services
             return order?.ToOrderDTO();
         }
 
-        public async Task Delete(long id, Guid version)
+        public async Task Delete(long id)
         {
-            _unitOfWork.Orders.Delete(new Order { Id = id, Version = version});
+            _unitOfWork.Orders.Delete(new Order { Id = id});
             await _unitOfWork.Commit();
         }
 
-        public async Task<OrderDTO> UpdateStatus(long id, OrderStatus newStatus, Guid version)
+        public async Task<OrderDTO> UpdateStatus(long id, OrderStatus newStatus)
         {
             var order = await _unitOfWork.Orders.GetByIdAsync(id) ?? throw new OrderNotFoundException();
             order.Status = newStatus;
-            order.Version = Guid.NewGuid();
 
             await _unitOfWork.Commit();
 
@@ -115,7 +114,6 @@ namespace Restaurant_Orders.Services
 
             var orderTotal = CalculateOrderTotal(order.OrderItems);
             order.Total = orderTotal;
-            order.Version = Guid.NewGuid();
 
             await _unitOfWork.Commit();
 
@@ -136,8 +134,7 @@ namespace Restaurant_Orders.Services
             {
                 CustomerId = customerId,
                 OrderItems = orderItems,
-                Total = orderTotal,
-                Version = Guid.NewGuid()
+                Total = orderTotal
             };
 
             _unitOfWork.Orders.Add(order);

@@ -97,7 +97,7 @@ namespace Restaurant_Orders.Controllers
         {
             try
             {
-                var order = await _orderService.UpdateStatus(id, orderStatusDTO.Status, orderStatusDTO.Version);
+                var order = await _orderService.UpdateStatus(id, orderStatusDTO.Status);
                 return Ok(order);
             }
             catch (OrderNotFoundException)
@@ -181,16 +181,16 @@ namespace Restaurant_Orders.Controllers
             }
         }
 
-        [HttpDelete("{id}/{version:Guid}")]
+        [HttpDelete("{id}")]
         [Authorize(Roles = "RestaurantOwner")]
         [Produces(MediaTypeNames.Application.Json)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult> DeleteOrder(long id, Guid version)
+        public async Task<ActionResult> DeleteOrder(long id)
         {
             try
             {
-                await _orderService.Delete(id, version);
+                await _orderService.Delete(id);
 
                 return NoContent();
             }
@@ -208,7 +208,7 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<OrderDTO>> CancelOrder(long id, VersionDTO versionDTO)
+        public async Task<ActionResult<OrderDTO>> CancelOrder(long id)
         {
             var order = await _orderService.GetById(id);
             if (order == null)
@@ -232,7 +232,7 @@ namespace Restaurant_Orders.Controllers
 
             try
             {
-                order = await _orderService.UpdateStatus(order.Id, OrderStatus.CANCELED, versionDTO.Version);
+                order = await _orderService.UpdateStatus(order.Id, OrderStatus.CANCELED);
 
                 return Ok(order);
             }
@@ -250,7 +250,7 @@ namespace Restaurant_Orders.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<OrderDTO>> PayOrder(long id, VersionDTO versionDTO)
+        public async Task<ActionResult<OrderDTO>> PayOrder(long id)
         {
             var order = await _orderService.GetById(id);
             if (order == null)
@@ -274,7 +274,7 @@ namespace Restaurant_Orders.Controllers
 
             try
             {
-                order = await _orderService.UpdateStatus(order.Id, OrderStatus.BILLED, versionDTO.Version);
+                order = await _orderService.UpdateStatus(order.Id, OrderStatus.BILLED);
 
                 return Ok(order);
             }

@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace RestaurantOrder.Core.DTOs
 {
-    public class OrderStatusDTO : VersionDTO
+    public class OrderStatusDTO
     {
         [Required]
         public OrderStatus Status {  get; set; }
