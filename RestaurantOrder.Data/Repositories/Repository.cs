@@ -51,9 +51,9 @@ namespace RestaurantOrder.Data.Repositories
         {
             var query = queryDetails.WhereQueries.Aggregate(
                 _dbContext.Set<TModel>().AsQueryable(),
-                (current, where) =>  current.Where(where));
+                (current, where) => current.Where(where));
 
-            query = queryDetails.SortOrder == "desc" ?
+            query = queryDetails.DescendingOrder ?
                 query.OrderByDescending(queryDetails.OrderingExpr) :
                 query.OrderBy(queryDetails.OrderingExpr);
 

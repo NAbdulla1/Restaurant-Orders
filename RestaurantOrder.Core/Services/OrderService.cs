@@ -7,7 +7,6 @@ using RestaurantOrder.Core.Services;
 using RestaurantOrder.Data;
 using RestaurantOrder.Data.Models;
 using RestaurantOrder.Data.Models.DTOs;
-using RestaurantOrder.Data.Repositories;
 using System.Linq.Expressions;
 
 namespace Restaurant_Orders.Services
@@ -39,7 +38,12 @@ namespace Restaurant_Orders.Services
         public async Task<PagedData<OrderDTO>> Get(IndexingDTO indexData, OrderFilterDTO orderFilters)
         {
             int pageSize = indexData.PageSize ?? _defaultPageSize;
-            var queryDetails = new QueryDetailsDTO<Order>(indexData.Page, pageSize);
+            var queryDetails = new QueryDetailsDTO<Order>(
+                GetOrderExpression(indexData.SortBy),
+                indexData.SortOrder == "desc",
+                indexData.Page,
+                pageSize);
+
             if (indexData.SearchBy != null)
             {
                 AddSearchQuery(queryDetails, indexData.SearchBy);
@@ -54,8 +58,6 @@ namespace Restaurant_Orders.Services
             {
                 AddOrderStatusQuery(queryDetails, orderFilters.Status);
             }
-
-            AddSortQuery(queryDetails, indexData.SortBy, indexData.SortOrder);
 
             var result = await _unitOfWork.Orders.GetAllAsync(queryDetails);
 
@@ -81,7 +83,7 @@ namespace Restaurant_Orders.Services
 
         public async Task Delete(long id)
         {
-            _unitOfWork.Orders.Delete(new Order { Id = id});
+            _unitOfWork.Orders.Delete(new Order { Id = id });
             await _unitOfWork.Commit();
         }
 
@@ -150,7 +152,7 @@ namespace Restaurant_Orders.Services
 
         private void AddSearchQuery(QueryDetailsDTO<Order> queryDetails, string searchTerm)
         {
-            queryDetails.WhereQueries.Add(order =>
+            queryDetails.AddQuery(order =>
                 _unitOfWork.OrderItems.SearchInName(searchTerm)
                     .Select(oi => oi.OrderId)
                         .Contains(order.Id));
@@ -158,36 +160,23 @@ namespace Restaurant_Orders.Services
 
         private static void AddCustomerQuery(QueryDetailsDTO<Order> queryDetails, long customerId)
         {
-            queryDetails.WhereQueries.Add(order => order.CustomerId == customerId);
+            queryDetails.AddQuery(order => order.CustomerId == customerId);
         }
 
         private static void AddOrderStatusQuery(QueryDetailsDTO<Order> queryDetails, OrderStatus? status)
         {
-            queryDetails.WhereQueries.Add(order => order.Status == status);
+            queryDetails.AddQuery(order => order.Status == status);
         }
 
-        private static void AddSortQuery(QueryDetailsDTO<Order> queryDetails, string? sortColumn, string? sortDirection)
+        private static Expression<Func<Order, object?>> GetOrderExpression(string? sortColumn)
         {
-            sortDirection ??= "asc";
-            sortColumn ??= "id";
-
-            queryDetails.SortOrder = sortDirection;
-            queryDetails.OrderingExpr = GetOrderExpression(sortColumn);
-        }
-
-        private static Expression<Func<Order, object?>> GetOrderExpression(string sortColumn)
-        {
-            switch (sortColumn.ToLower())
+            return (sortColumn?.ToLower()) switch
             {
-                case "customerid":
-                    return item => item.CustomerId;
-                case "createdat":
-                    return item => item.CreatedAt;
-                case "total":
-                    return item => item.Total;
-                default:
-                    return item => item.Id;
-            }
+                "customerid" => item => item.CustomerId,
+                "createdat" => item => item.CreatedAt,
+                "total" => item => item.Total,
+                _ => item => item.Id,
+            };
         }
     }
 }

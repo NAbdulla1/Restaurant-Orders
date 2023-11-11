@@ -1,25 +1,44 @@
-﻿using System.Linq.Expressions;
+﻿using System.Collections.ObjectModel;
+using System.Linq.Expressions;
 
 namespace RestaurantOrder.Data.Models.DTOs
 {
-    public class QueryDetailsDTO<T>
+    public class QueryDetailsDTO<T> where T : ModelBase
     {
-        public int Page {  get; private set; }
+        private List<Expression<Func<T, bool>>> _whereQueries;
+
+        public QueryDetailsDTO(
+            Expression<Func<T, object?>> orderExpr,
+            bool orderDescending,
+            int page,
+            int pageSize)
+        {
+            Page = page;
+            PageSize = pageSize;
+            DescendingOrder = orderDescending;
+            OrderingExpr = orderExpr;
+            _whereQueries = new List<Expression<Func<T, bool>>>();
+        }
+
+        public int Page { get; private set; }
 
         public int PageSize { get; private set; }
 
-        public List<Expression<Func<T, bool>>> WhereQueries { get; private set; }
-
-        public Expression<Func<T, object?>>? OrderingExpr { get; set; }
-
-        public string SortOrder { get; set; }
-
-        public QueryDetailsDTO(int page, int pageSize)
+        public ReadOnlyCollection<Expression<Func<T, bool>>> WhereQueries
         {
-            WhereQueries = new();
-            Page = page;
-            PageSize = pageSize;
-            SortOrder = "asc";
+            get
+            {
+                return _whereQueries.AsReadOnly();
+            }
+        }
+
+        public Expression<Func<T, object?>> OrderingExpr { get; private set; } = item => item.Id;
+
+        public bool DescendingOrder { get; private set; } = false;
+
+        public void AddQuery(Expression<Func<T, bool>> query)
+        {
+            _whereQueries.Add(query);
         }
     }
 }

@@ -83,13 +83,16 @@ namespace Restaurant_Orders.Services
 
         public async Task<PagedData<MenuItemDTO>> Get(IndexingDTO indexData)
         {
-            var queryDetails = new QueryDetailsDTO<MenuItem>(indexData.Page, indexData.PageSize ?? _defaultPageSize);
+            var queryDetails = new QueryDetailsDTO<MenuItem>(
+                GetOrderExpression(indexData.SortBy),
+                indexData.SortOrder == "desc",
+                indexData.Page,
+                indexData.PageSize ?? _defaultPageSize);
+
             if (indexData.SearchBy != null)
             {
-                queryDetails.WhereQueries.Add(GetSearchQuery(indexData.SearchBy));
+                queryDetails.AddQuery(GetSearchQuery(indexData.SearchBy));
             }
-
-            AddSortQuery(queryDetails, indexData.SortBy, indexData.SortOrder);
 
             var pageData = await _unitOfWork.MenuItems.GetAllAsync(queryDetails);
 
@@ -111,28 +114,15 @@ namespace Restaurant_Orders.Services
                         );
         }
 
-        private static void AddSortQuery(QueryDetailsDTO<MenuItem> queryDetails, string? sortColumn, string? sortDirection)
+        private static Expression<Func<MenuItem, object?>> GetOrderExpression(string? sortColumn)
         {
-            sortDirection ??= "asc";
-            sortColumn ??= "id";
-
-            queryDetails.SortOrder = sortDirection;
-            queryDetails.OrderingExpr = GetOrderExpression(sortColumn);
-        }
-
-        private static Expression<Func<MenuItem, object?>> GetOrderExpression(string sortColumn)
-        {
-            switch (sortColumn.ToLower())
+            return (sortColumn?.ToLower()) switch
             {
-                case "name":
-                    return item => item.Name;
-                case "description":
-                    return item => item.Description;
-                case "price":
-                    return item => item.Price;
-                default:
-                    return item => item.Id;
-            }
+                "name" => item => item.Name,
+                "description" => item => item.Description,
+                "price" => item => item.Price,
+                _ => item => item.Id,
+            };
         }
     }
 }
