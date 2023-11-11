@@ -2,9 +2,8 @@
 using Restaurant_Orders.Services;
 using RestaurantOrder.Core.DTOs;
 using RestaurantOrder.Core.Exceptions;
+using RestaurantOrder.Data;
 using RestaurantOrder.Data.Models;
-using RestaurantOrder.Data.Repositories;
-using System.Security.Cryptography;
 
 namespace RestaurantOrder.All.Tests
 {
@@ -12,8 +11,8 @@ namespace RestaurantOrder.All.Tests
     public class UserServiceShould
     {
         private Mock<IPasswordService> _mockPasswordService;
-        private Mock<ITokenService> mockTokenService;
-        private Mock<IUserRepository> _mockUserRepository;
+        private Mock<ITokenService> _mockTokenService;
+        private Mock<IUnitOfWork> _mockUnitOfWork;
         private UserService _sut;
 
         [SetUp]
@@ -22,13 +21,13 @@ namespace RestaurantOrder.All.Tests
             _mockPasswordService = new Mock<IPasswordService>();
             var _passwordService = _mockPasswordService.Object;
 
-            mockTokenService = new Mock<ITokenService>();
-            var _tokenService = mockTokenService.Object;
+            _mockTokenService = new Mock<ITokenService>();
+            var _tokenService = _mockTokenService.Object;
 
-            _mockUserRepository = new Mock<IUserRepository>();
-            var _userRepository = _mockUserRepository.Object;
+            _mockUnitOfWork = new Mock<IUnitOfWork>();
+            var _unitOfWork = _mockUnitOfWork.Object;
 
-            _sut = new UserService(_userRepository, _passwordService, _tokenService);
+            _sut = new UserService(_unitOfWork, _passwordService, _tokenService);
         }
 
         [Test]
@@ -43,27 +42,18 @@ namespace RestaurantOrder.All.Tests
                 Password = "password",
                 ConfirmPassword = "password"
             };
-            var dbGeneratedUserId = 1;
+
             var hashedPassword = $"hashedPassword: {customerRegisterDTO.Password}";
             _mockPasswordService.Setup(ps => ps.HashPassword(hashedPassword));
 
-            _mockUserRepository.Setup(ur => ur.GetByEmail(It.IsAny<string>())).Returns(() => Task.FromResult<User?>(null));
-            _mockUserRepository.Setup(ur => ur.Add(It.IsAny<User>())).Returns(new User
-            {
-                Id = dbGeneratedUserId,
-                FirstName = customerRegisterDTO.FirstName,
-                LastName = customerRegisterDTO.LastName,
-                Email = customerRegisterDTO.Email,
-                Password = hashedPassword,
-                UserType = UserType.Customer
-            });
+            _mockUnitOfWork.Setup(unitOfWork => unitOfWork.Users.GetByEmail(It.IsAny<string>())).Returns(() => Task.FromResult<User?>(null));
+            _mockUnitOfWork.Setup(unitOfWork => unitOfWork.Commit()).ReturnsAsync(1);
 
             //Act
             var userDTO = await _sut.CreateCustomer(customerRegisterDTO);
 
             //Assert
             Assert.That(userDTO, Is.Not.Null);
-            Assert.That(userDTO.Id, Is.EqualTo(dbGeneratedUserId));
             Assert.That(userDTO.FirstName, Is.EqualTo(customerRegisterDTO.FirstName));
             Assert.That(userDTO.LastName, Is.EqualTo(customerRegisterDTO.LastName));
             Assert.That(userDTO.Email, Is.EqualTo(customerRegisterDTO.Email));
@@ -86,19 +76,23 @@ namespace RestaurantOrder.All.Tests
             var hashedPassword = $"hashedPassword: {customer.Password}";
             _mockPasswordService.Setup(ps => ps.HashPassword(hashedPassword));
 
-            _mockUserRepository.Setup(ur => ur.GetByEmail(customer.Email)).ReturnsAsync(new User
-            {
-                Id = generatedUserId,
-                FirstName = customer.FirstName,
-                LastName = customer.LastName,
-                Email = customer.Email,
-                Password = hashedPassword,
-                UserType = UserType.Customer
-            });
+            _mockUnitOfWork.Setup(unitOfWork => unitOfWork.Users.GetByEmail(customer.Email))
+                .ReturnsAsync(new User
+                {
+                    Id = generatedUserId,
+                    FirstName = customer.FirstName,
+                    LastName = customer.LastName,
+                    Email = customer.Email,
+                    Password = hashedPassword,
+                    UserType = UserType.Customer
+                });
 
             //Act & Assert
-            var exception = Assert.ThrowsAsync<CustomerAlreadyExistsException>(async () => await _sut.CreateCustomer(customer));
-            Assert.That(exception.Message, Is.EqualTo($"Another user already exists with the given email: '{customer.Email}'."));
+            Assert.That(async () => await _sut.CreateCustomer(customer), Throws.TypeOf<CustomerAlreadyExistsException>());
+            Assert.That(async () => await _sut.CreateCustomer(customer), Throws.TypeOf<CustomerAlreadyExistsException>()
+                .With
+                .Property("Message")
+                .EqualTo($"Another user already exists with the given email: '{customer.Email}'."));
         }
     }
 }
