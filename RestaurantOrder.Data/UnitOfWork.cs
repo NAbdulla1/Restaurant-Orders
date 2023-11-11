@@ -21,14 +21,19 @@ namespace RestaurantOrder.Data
         public IMenuItemRepository MenuItems { get; private set; }
         public IOrderItemRepository OrderItems { get; private set; }
 
-        public UnitOfWork(RestaurantContext restaurantContext)
+        public UnitOfWork(
+            RestaurantContext restaurantContext,
+            IUserRepository userRepository,
+            IOrderRepository orderRepository,
+            IMenuItemRepository menuItemRepository,
+            IOrderItemRepository orderItemRepository)
         {
             _restaurantContext = restaurantContext;
 
-            Users = new UserRepository(restaurantContext);
-            Orders = new OrderRepository(restaurantContext);
-            MenuItems = new MenuItemRepository(restaurantContext);
-            OrderItems = new OrderItemRepository(restaurantContext);
+            Users = userRepository;
+            Orders = orderRepository;
+            MenuItems = menuItemRepository;
+            OrderItems = orderItemRepository;
         }
 
         public async Task<int> Commit()
