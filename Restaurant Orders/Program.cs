@@ -3,8 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Restaurant_Orders.Authorizations;
 using Restaurant_Orders.Extensions;
-using Restaurant_Orders.Filters;
 using Restaurant_Orders.Infrastructure;
+using Restaurant_Orders.Middlewares;
 using RestaurantOrder.Core.Data;
 using RestaurantOrder.Core.DTOs;
 using RestaurantOrder.Data;
@@ -14,10 +14,7 @@ using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers(options =>
-{
-    options.Filters.Add(typeof(ServerExceptionFilter));
-})
+builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
@@ -67,6 +64,8 @@ using (var scope = app.Services.CreateScope())
     var ownerInfo = app.Configuration.GetRequiredSection(OwnerConfigData.ConfigSectionName).Get<OwnerConfigData>();
     await DataSeeder.SeedAdmin(services, ownerInfo);
 }
+
+app.UseServerErrorHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
