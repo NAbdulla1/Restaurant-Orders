@@ -4,7 +4,6 @@ using RestaurantOrder.Core.Exceptions;
 using RestaurantOrder.Core.Extensions;
 using RestaurantOrder.Data;
 using RestaurantOrder.Data.Models;
-using RestaurantOrder.Data.Repositories;
 using System.Security.Claims;
 using System.Text.Json;
 
@@ -87,7 +86,7 @@ namespace Restaurant_Orders.Services
 
         public UserDTO GetCurrentAuthenticatedUser(HttpContext httpContext)
         {
-            if (!httpContext.User.HasClaim(c => c.Type == ClaimTypes.UserData))
+            if (httpContext.User == null || !httpContext.User.HasClaim(c => c.Type == ClaimTypes.UserData))
             {
                 throw new UnauthenticatedException("User authentication failed.");
             }
